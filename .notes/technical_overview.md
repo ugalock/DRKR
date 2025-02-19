@@ -26,6 +26,8 @@
 ## Vector Database:
 	Pinecone
 
+## Testing:
+	PyTest
 --
 
 # Frontend
