@@ -1,0 +1,52 @@
+# .cursorrules
+
+## General
+- ALWAYS write clear, concise documentation for every new feature.
+- ALWAYS write useful comments that explain “why” not just “what.”
+- ALWAYS write automated tests for new and modified code.
+- ALWAYS enforce security best practices (e.g. TLS, input validation).
+- ALWAYS read data model schemas before interacting with the PostgreSQL or Pinecone databases.
+- ALWAYS maintain a separation between the frontend and backend codebases.
+- ALWAYS maintain a requirements.txt file for Python dependencies and check package versions for specific documentation.
+
+## Backend
+### Authentication & Authorization
+- ALWAYS offload password handling via OAuth2 with OpenID Connect.
+- ALWAYS issue JWT tokens for stateless session management.
+- ALWAYS generate and assign random API keys for client/integration access.
+- ALWAYS transmit tokens over TLS and store them securely (HttpOnly cookies or secure storage).
+- ALWAYS enforce role-based access control (RBAC) to restrict endpoint access.
+
+### API & Data Layer
+- ALWAYS build RESTful endpoints using FastAPI conventions.
+- ALWAYS design endpoints as resource-oriented with noun-based URLs.
+- ALWAYS use proper HTTP methods (GET, POST, PUT/PATCH, DELETE) and standard status codes.
+- ALWAYS use PostgreSQL for structured data with parameterized queries and migrations.
+- ALWAYS implement full-text search (PostgreSQL) and pgvector for vector similarity when needed.
+
+### Background & Logging
+- ALWAYS use Celery for asynchronous background processing.
+- ALWAYS use structured JSON logging with context (e.g. request IDs, user IDs).
+- ALWAYS plan to evolve from file-based logging to centralized systems (ELK/Sentry).
+
+### Vector Search
+- ALWAYS use Pinecone for efficient vector database operations.
+
+## Frontend
+### UI & REST API Integration
+- ALWAYS build UI with React following best practices (functional components with hooks).
+- ALWAYS design clean RESTful APIs with resource-oriented, versioned endpoints (e.g. /api/v1/prompts).
+- ALWAYS use JSON as the data format and document the API via OpenAPI/Swagger.
+- ALWAYS implement CORS correctly to support cross-origin requests.
+
+### Data Handling & UX
+- ALWAYS show loading indicators when fetching or submitting data.
+- ALWAYS handle API errors gracefully with user-friendly messages.
+- ALWAYS use client-side routing (React Router) for a seamless SPA experience.
+- ALWAYS cache critical data (using local storage or React context) when appropriate.
+
+### Testing & API Wrappers
+- ALWAYS write integration tests using Jest and React Testing Library.
+- ALWAYS use token-based authentication in API calls.
+- ALWAYS abstract API calls into reusable wrappers (or use React Query) to manage caching and side effects.
+- ALWAYS implement CSRF protection if cookies are used for authentication.
