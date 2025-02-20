@@ -37,27 +37,62 @@
 ├── frontend
 │   ├── public                  # Static files (favicons, etc.)
 │   ├── src
-│   │   ├── index.js            # React entry point
-│   │   ├── App.js              # Main App component / routing layout
-│   │   ├── services
-│   │   │   └── api.js          # API wrapper (fetch, axios, React Query, etc.)
-│   │   ├── components
-│   │   │   ├── Auth            # Auth-related components (Login, etc.)
-│   │   │   ├── Prompts         # Prompt listing, creation, detail
-│   │   │   └── ResearchJobs    # Possibly for viewing job progress/results
-│   │   ├── pages
-│   │   │   ├── Home.js
-│   │   │   ├── PromptsPage.js
-│   │   │   ├── PromptDetail.js
-│   │   │   ├── ResearchJobDetail.js
-│   │   │   └── UserProfile.js
-│   │   ├── hooks               # Custom hooks if used (e.g. useAuth, usePromptData)
-│   │   ├── store               # (Optional) Redux or Zustand store if used
-│   │   ├── routes.js           # React Router config
-│   │   └── App.css             # Global styling
+│   │   ├── main.tsx
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   ├── assets/
+│   │   │   └── (images, logos, icons...)
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   └── (...)
+│   │   ├── pages/
+│   │   │   ├── Home/
+│   │   │   ├── Auth/
+│   │   │   ├── Research/
+│   │   │   ├── Organization/
+│   │   │   ├── Tags/
+│   │   │   └── (...)
+│   │   ├── features/
+│   │   │   ├── deepResearch/
+│   │   │   ├── tags/
+│   │   │   ├── organizations/
+│   │   │   ├── search/
+│   │   │   └── (...)
+│   │   ├── routes/
+│   │   │   └── index.tsx
+│   │   ├── services/
+│   │   │   ├── api/
+│   │   │   │   ├── axiosConfig.ts
+│   │   │   │   ├── userApi.ts
+│   │   │   │   ├── researchApi.ts
+│   │   │   │   ├── tagsApi.ts
+│   │   │   │   └── (...)
+│   │   │   ├── queryClient.ts
+│   │   │   └── authService.ts
+│   │   ├── store/
+│   │   │   └── userStore.ts
+│   │   ├── hooks/
+│   │   │   ├── useAuth.ts
+│   │   │   ├── useFetchOrg.ts
+│   │   │   └── (...)
+│   │   ├── context/
+│   │   │   ├── AuthContext.tsx
+│   │   │   ├── OrgContext.tsx
+│   │   │   └── (...)
+│   │   ├── utils/
+│   │   │   ├── constants.ts
+│   │   │   ├── formatters.ts
+│   │   │   └── (...)
+│   │   ├── types/
+│   │   │   ├── index.d.ts
+│   │   │   ├── user.d.ts
+│   │   │   ├── research.d.ts
+│   │   │   ├── org.d.ts
+│   │   │   └── (...)
+│   │   └── vite-env.d.ts
 │   ├── package.json
-│   ├── yarn.lock (or package-lock.json)
-│   └── .env.example            # Frontend environment variables (API_URL, etc.)
+│   ├── yarn.lock             # (or package-lock.json)
+│   └── .env.example         # Frontend environment variables (API_URL, etc.)
 ├── logs                        # Directory for storing logs (MVP uses file-based logging)
 │   ├── backend.log
 │   └── celery.log

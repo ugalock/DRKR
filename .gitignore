@@ -15,13 +15,14 @@ build/
 *.spec
 pip-log.txt
 pip-delete-this-directory.txt
-drkr-venv/
+migrations/
 
 # Virtual Environment
 venv/
 env/
 ENV/
 .venv/
+drkr-venv/
 
 # IDE / Editor Directories
 .vscode/
@@ -48,6 +49,8 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Redis
+redis-data/
 # Logs
 logs/
 *.log

@@ -1,0 +1,19 @@
+[
+    {
+        "id": "research:{deep_research_id}:chunk:{chunk_index}",
+        "values": ["...embedding float array..."],
+        "metadata": {
+            "deep_research_id": "123",
+            "chunk_index": "2",
+            "type": "report_chunk",
+            "title": "Title from Postgres",
+            "tags": [
+                "NLP",
+                "Summaries"
+            ],
+            "model_name": "gpt-4",
+            "created_at": "2025-02-19T12:00:00Z",
+            "chunk_text": "This chunk covers the methodology..."
+        }
+    }
+]
