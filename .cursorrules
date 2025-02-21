@@ -1,5 +1,11 @@
 # .cursorrules
 
+## EVERY TIME
+- ALWAYS CAREFULLY READ .notes/project_summary.md and include it in your context.
+- ALWAYS CAREFULLY READ .notes/technical_overview.md and include it in your context.
+- ALWAYS change an item in .notes.workflow.md from [ ] to [✔] when completed.
+- ALWAYS when changing code in frontend/ or backend/ CAREFULLY READ .notes/frontend_overview.md and include it in your context.
+
 ## General
 - ALWAYS write clear, concise documentation for every new feature.
 - ALWAYS write useful comments that explain “why” not just “what.”

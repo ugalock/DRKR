@@ -3,7 +3,7 @@
 
 # Backend
 ## Authentication & Authorization:
-	OAuth2 with OpenID Connect to offload password handling. After authentication, issue JWT tokens for stateless session management (allowing the API to validate user identity without server-side sessions). For API clients or integrations, provide API keys for access – generate random tokens and associate them with user accounts. Ensure tokens are transmitted over TLS and stored securely (use HttpOnly cookies or secure storage to mitigate XSS/CSRF). Role-based access control (RBAC) should be enforced in the API (define user roles or scopes to restrict certain endpoints).
+	OAuth2 with OpenID Connect (Auth0) to offload password handling. After authentication, issue JWT tokens for stateless session management (allowing the API to validate user identity without server-side sessions). For API clients or integrations, provide API keys for access – generate random tokens and associate them with user accounts. Ensure tokens are transmitted over TLS and stored securely (use HttpOnly cookies or secure storage to mitigate XSS/CSRF). Role-based access control (RBAC) should be enforced in the API (define user roles or scopes to restrict certain endpoints).
 
 ## API Framework:
 	FastAPI in Python
@@ -12,7 +12,7 @@
 	PostgreSQL
 
 ## Background Processing:
-	Celery
+	Celery + Redis
 
 ## Search & Indexing:
 	PostgreSQL full-text search

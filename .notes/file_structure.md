@@ -10,14 +10,18 @@
 │   │   ├── __init__.py
 │   │   ├── main.py             # FastAPI entry point
 │   │   ├── config.py           # Configuration settings (DB URL, Pinecone API Key, etc.)
-│   │   ├── models.py           # SQLAlchemy models for Postgres (Prompt, User, ResearchOutput, etc.)
+│   │   ├── models.py           # SQLAlchemy models for Postgres (Prompt, User, DeepResearch, etc.)
 │   │   ├── schemas.py          # Pydantic models (request/response)
 │   │   ├── routers
 │   │   │   ├── __init__.py
-│   │   │   ├── auth.py         # OAuth2 endpoints & JWT logic
-│   │   │   ├── prompts.py      # CRUD endpoints for prompts
-│   │   │   ├── users.py        # CRUD endpoints for users
-│   │   │   └── research_jobs.py# Endpoints for launching "deep research"
+│   │   │   ├── auth.py           # OAuth2 endpoints & JWT logic
+│   │   │   ├── comments.py       # CRUD endpoints for comments
+│   │   │   ├── users.py          # CRUD endpoints for users
+│   │   │   ├── organizations.py  # CRUD endpoints for organizations
+│   │   │   ├── tags.py           # CRUD endpoints for tags
+│   │   │   ├── search.py         # CRUD endpoints for search
+│   │   │   ├── deep_research.py  # CRUD endpoints for deep_research
+│   │   │   └── research_jobs.py  # Endpoints for launching "deep research"
 │   │   ├── services
 │   │   │   ├── authentication.py  # Helper functions for JWT, role checks, etc.
 │   │   │   ├── pinecone_service.py # Interactions with Pinecone
