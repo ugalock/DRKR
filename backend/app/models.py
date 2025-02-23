@@ -46,9 +46,16 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False)
     display_name = Column(String(100))
     default_role = Column(String(50), default="user")
+    auth_provider = Column(String(50), default="google-oauth2")
+    picture_url = Column(String(255))
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
     updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
+    __table_args__ = (
+        CheckConstraint("""
+            auth_provider IN ('google-oauth2', 'github', 'facebook', 'linkedin', 'twitter')
+        """, name="chk_user_auth_provider"),
+    )
     # Relationship examples
     # deep_research_created = relationship("DeepResearch", back_populates="owner_user") # etc.
 

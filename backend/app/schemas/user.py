@@ -16,26 +16,31 @@ from __future__ import annotations
 import pprint
 import re  # noqa: F401
 import json
-
-
-
-
-from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
+from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
+from app.schemas.organization_member import OrganizationMember
+
 class User(BaseModel):
     """
     User
     """ # noqa: E501
     id: Optional[StrictInt] = None
+    external_id: Optional[StrictStr] = None
     username: Optional[StrictStr] = None
     email: Optional[StrictStr] = None
     display_name: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["id", "username", "email", "display_name"]
+    default_role: Optional[StrictStr] = None
+    auth_provider: Optional[StrictStr] = None
+    picture_url: Optional[StrictStr] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    __properties: ClassVar[List[str]] = ["id", "external_id", "username", "email", "display_name", "default_role", "auth_provider", "picture_url", "created_at", "updated_at"]
 
     model_config = {
         "populate_by_name": True,
@@ -87,10 +92,51 @@ class User(BaseModel):
 
         _obj = cls.model_validate({
             "id": obj.get("id"),
+            "external_id": obj.get("external_id"),
             "username": obj.get("username"),
             "email": obj.get("email"),
-            "display_name": obj.get("display_name")
+            "display_name": obj.get("display_name"),
+            "default_role": obj.get("default_role"),
+            "auth_provider": obj.get("auth_provider"),
+            "picture_url": obj.get("picture_url"),
+            "created_at": obj.get("created_at"),
+            "updated_at": obj.get("updated_at")
         })
         return _obj
 
+class UserProfile(User):
+    """
+    UserProfile extends User to include organization membership information
+    """
+    org_memberships: Optional[List[OrganizationMember]] = None
+    __properties: ClassVar[List[str]] = User._User__properties + ["org_memberships"]
 
+    model_config = {
+        "populate_by_name": True,
+        "validate_assignment": True,
+        "protected_namespaces": (),
+    }
+
+    @classmethod
+    def from_dict(cls, obj: Dict) -> Self:
+        """Create an instance of User from a dict"""
+        if obj is None:
+            return None
+
+        if not isinstance(obj, dict):
+            return cls.model_validate(obj)
+
+        _obj = cls.model_validate({
+            "id": obj.get("id"),
+            "external_id": obj.get("external_id"),
+            "username": obj.get("username"),
+            "email": obj.get("email"),
+            "display_name": obj.get("display_name"),
+            "default_role": obj.get("default_role"),
+            "auth_provider": obj.get("auth_provider"),
+            "picture_url": obj.get("picture_url"),
+            "created_at": obj.get("created_at"),
+            "updated_at": obj.get("updated_at"),
+            "org_memberships": obj.get("org_memberships")
+        })
+        return _obj

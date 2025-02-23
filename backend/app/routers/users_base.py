@@ -33,9 +33,3 @@ class BaseUsers:
         user_update_request: UserUpdateRequest,
     ) -> User:
         ...
-
-    async def users_post(
-        self,
-        user_create_request: UserCreateRequest,
-    ) -> User:
-        ...

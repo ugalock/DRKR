@@ -31,10 +31,11 @@ class UserCreateRequest(BaseModel):
     """
     UserCreateRequest
     """ # noqa: E501
+    external_id: StrictStr
     username: Optional[StrictStr] = None
-    email: Optional[StrictStr] = None
-    password: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["username", "email", "password"]
+    email: StrictStr
+    display_name: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["external_id", "username", "email", "display_name"]
 
     model_config = {
         "populate_by_name": True,
@@ -85,9 +86,10 @@ class UserCreateRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
+            "external_id": obj.get("external_id"),
             "username": obj.get("username"),
             "email": obj.get("email"),
-            "password": obj.get("password")
+            "display_name": obj.get("display_name")
         })
         return _obj
 

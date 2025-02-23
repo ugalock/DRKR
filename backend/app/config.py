@@ -11,10 +11,16 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     PINECONE_API_KEY: str
     PINECONE_INDEX_NAME: str
+    AUTH0_CLIENT_ID: str
+    AUTH0_CLIENT_SECRET: str
+    AUTH0_DOMAIN: str
+    AUTH0_CALLBACK_URL: str
     REDIS_URL: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     API_PORT: Optional[int] = 8000
-    # Add any other env variables you need here...
+    # JWT Configuration
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     
     class Config:
         env_file = os.path.join(FILE_PATH,"..", ".env")

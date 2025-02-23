@@ -9,6 +9,7 @@ from app.routers.research_jobs import router as ResearchJobsRouter
 from app.routers.search import router as SearchRouter
 from app.routers.tags import router as TagsRouter
 from app.routers.users import router as UsersRouter
+from app.routers.api_keys import router as ApiKeysRouter
 
 app = FastAPI(
     title="DRKR API",
@@ -25,3 +26,4 @@ app.include_router(ResearchJobsRouter)
 app.include_router(SearchRouter)
 app.include_router(TagsRouter)
 app.include_router(UsersRouter)
+app.include_router(ApiKeysRouter)

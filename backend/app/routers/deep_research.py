@@ -38,7 +38,7 @@ for _, name, _ in pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + "."):
 
 
 @router.get(
-    "/research",
+    "/deep-research",
     responses={
         200: {"model": List[DeepResearch], "description": "A list of deep research items"},
     },
@@ -54,7 +54,7 @@ async def research_get(
 
 
 @router.delete(
-    "/research/{id}",
+    "/deep-research/{id}",
     responses={
         204: {"description": "Research item deleted"},
     },
@@ -71,7 +71,7 @@ async def research_id_delete(
 
 
 @router.get(
-    "/research/{id}",
+    "/deep-research/{id}",
     responses={
         200: {"model": DeepResearch, "description": "Research item data"},
     },
@@ -88,7 +88,7 @@ async def research_id_get(
 
 
 @router.patch(
-    "/research/{id}",
+    "/deep-research/{id}",
     responses={
         200: {"model": DeepResearch, "description": "Research item updated"},
     },
@@ -106,7 +106,7 @@ async def research_id_patch(
 
 
 @router.post(
-    "/research",
+    "/deep-research",
     responses={
         201: {"model": DeepResearch, "description": "Deep research item created"},
     },

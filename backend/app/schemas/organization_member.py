@@ -20,23 +20,24 @@ import json
 
 
 
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
-class TagCreateRequest(BaseModel):
+class OrganizationMember(BaseModel):
     """
-    TagCreateRequest
+    OrganizationMember
     """ # noqa: E501
-    name: StrictStr
-    description: Optional[StrictStr] = None
-    is_global: Optional[StrictBool] = None
+    id: Optional[StrictInt] = None
     organization_id: Optional[StrictInt] = None
     user_id: Optional[StrictInt] = None
-    __properties: ClassVar[List[str]] = ["name", "description", "is_global", "organization_id", "user_id"]
+    role: Optional[StrictStr] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    __properties: ClassVar[List[str]] = ["id", "organization_id", "user_id", "role", "created_at", "updated_at"]
 
     model_config = {
         "populate_by_name": True,
@@ -56,7 +57,7 @@ class TagCreateRequest(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Self:
-        """Create an instance of TagCreateRequest from a JSON string"""
+        """Create an instance of OrganizationMember from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -79,7 +80,7 @@ class TagCreateRequest(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Dict) -> Self:
-        """Create an instance of TagCreateRequest from a dict"""
+        """Create an instance of OrganizationMember from a dict"""
         if obj is None:
             return None
 
@@ -87,11 +88,12 @@ class TagCreateRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "name": obj.get("name"),
-            "description": obj.get("description"),
-            "is_global": obj.get("is_global"),
+            "id": obj.get("id"),
             "organization_id": obj.get("organization_id"),
-            "user_id": obj.get("user_id")
+            "user_id": obj.get("user_id"),
+            "role": obj.get("role"),
+            "created_at": obj.get("created_at"),
+            "updated_at": obj.get("updated_at")
         })
         return _obj
 

@@ -169,10 +169,12 @@ This folder is an optional **feature-based** approach that can store domain-spec
 ---
 
 ### `types/`
-- **Purpose**: Global TypeScript typings and interfaces.  
+- **Purpose**: Global TypeScript typings and interfaces.
+- **Key Responsibilities**:
+  - Define interfaces for the backend's Pydantic models found in backend/app/schemas.
 - **Examples**:
-  - `user.d.ts`: Defines the `User` interface matching the backend (id, username, email, roles).  
-  - `research.d.ts`: Types for a `DeepResearch` item, chunk structure, summaries, etc.  
+  - `user.d.ts`: Defines the `User` interface.
+  - `research.d.ts`: Types for a `DeepResearch` item.
   - `org.d.ts`: Organization membership shapes.  
   - `index.d.ts`: Possibly used for global declarations or module augmentations.
 

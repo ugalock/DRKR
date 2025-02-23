@@ -16,8 +16,7 @@ from __future__ import annotations
 import pprint
 import re  # noqa: F401
 import json
-
-
+from datetime import datetime
 
 
 from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
@@ -33,8 +32,12 @@ class Tag(BaseModel):
     """ # noqa: E501
     id: Optional[StrictInt] = None
     name: Optional[StrictStr] = None
+    description: Optional[StrictStr] = None
     is_global: Optional[StrictBool] = None
-    __properties: ClassVar[List[str]] = ["id", "name", "is_global"]
+    organization_id: Optional[StrictInt] = None # Only set for non-global tags
+    user_id: Optional[StrictInt] = None # Only set for non-global tags
+    created_at: Optional[datetime] = None
+    __properties: ClassVar[List[str]] = ["id", "name", "description", "is_global", "organization_id", "user_id", "created_at"]
 
     model_config = {
         "populate_by_name": True,
@@ -87,7 +90,11 @@ class Tag(BaseModel):
         _obj = cls.model_validate({
             "id": obj.get("id"),
             "name": obj.get("name"),
-            "is_global": obj.get("is_global")
+            "description": obj.get("description"),
+            "is_global": obj.get("is_global"),
+            "organization_id": obj.get("organization_id"),
+            "user_id": obj.get("user_id"),
+            "created_at": obj.get("created_at")
         })
         return _obj
 

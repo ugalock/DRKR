@@ -5,13 +5,14 @@
 - ALWAYS CAREFULLY READ .notes/technical_overview.md and include it in your context.
 - ALWAYS change an item in .notes.workflow.md from [ ] to [✔] when completed.
 - ALWAYS when changing code in frontend/ or backend/ CAREFULLY READ .notes/frontend_overview.md and include it in your context.
+- NEVER USE RELATIVE IMPORTS IN BACKEND CODE.
 
 ## General
 - ALWAYS write clear, concise documentation for every new feature.
 - ALWAYS write useful comments that explain “why” not just “what.”
 - ALWAYS write automated tests for new and modified code.
 - ALWAYS enforce security best practices (e.g. TLS, input validation).
-- ALWAYS read data model schemas before interacting with the PostgreSQL or Pinecone databases.
+- ALWAYS read data model schemas in backend/app/db/schema.sql and backend/app/models.py before interacting with the PostgreSQL or Pinecone databases.
 - ALWAYS maintain a separation between the frontend and backend codebases.
 - ALWAYS maintain a requirements.txt file for Python dependencies and check package versions for specific documentation.
 
@@ -27,6 +28,11 @@
 - ALWAYS build RESTful endpoints using FastAPI conventions.
 - ALWAYS design endpoints as resource-oriented with noun-based URLs.
 - ALWAYS use proper HTTP methods (GET, POST, PUT/PATCH, DELETE) and standard status codes.
+- ALWAYS carefully read files in backend/app/schemas to understand the API schemas before writing any code in backend/app.
+- ALWAYS organize routes by the base endpoint (Requests to /auth should be in backend/app/routers/auth.py)
+- ALWAYS ask before adding any new routers. If a new router is needed and requires a new schema.
+- ALWAYS follow the existing pattern for naming and structuring routers, schemas, and tests. Schemas should always be added in backend/app/schemas and should be named and organized similarly to the existing schemas. Use auth_login_request.py as an example.
+- ALWAYS add tests for any new router or endpoint you create in backend/tests.
 - ALWAYS use PostgreSQL for structured data with parameterized queries and migrations.
 - ALWAYS implement full-text search (PostgreSQL) and pgvector for vector similarity when needed.
 

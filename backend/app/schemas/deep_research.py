@@ -16,9 +16,7 @@ from __future__ import annotations
 import pprint
 import re  # noqa: F401
 import json
-
-
-
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
@@ -31,12 +29,20 @@ class DeepResearch(BaseModel):
     """
     DeepResearch
     """ # noqa: E501
-    id: Optional[StrictInt] = None
-    title: Optional[StrictStr] = None
-    prompt_text: Optional[StrictStr] = None
-    final_report: Optional[StrictStr] = None
-    visibility: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["id", "title", "prompt_text", "final_report", "visibility"]
+    id: StrictInt
+    user_id: StrictInt
+    owner_user_id: Optional[StrictInt] = None
+    owner_org_id: Optional[StrictInt] = None
+    visibility: StrictStr
+    title: StrictStr
+    prompt_text: StrictStr
+    final_report: StrictStr
+    model_name: Optional[StrictStr] = None
+    model_params: Optional[StrictStr] = None
+    source_count: Optional[StrictInt] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    __properties: ClassVar[List[str]] = ["id", "user_id", "owner_user_id", "owner_org_id", "visibility", "title", "prompt_text", "final_report", "model_name", "model_params", "source_count", "created_at", "updated_at"]
 
     model_config = {
         "populate_by_name": True,
@@ -88,11 +94,17 @@ class DeepResearch(BaseModel):
 
         _obj = cls.model_validate({
             "id": obj.get("id"),
+            "user_id": obj.get("user_id"),
+            "owner_user_id": obj.get("owner_user_id"),
+            "owner_org_id": obj.get("owner_org_id"),
+            "visibility": obj.get("visibility"),
             "title": obj.get("title"),
             "prompt_text": obj.get("prompt_text"),
             "final_report": obj.get("final_report"),
-            "visibility": obj.get("visibility")
+            "model_name": obj.get("model_name"),
+            "model_params": obj.get("model_params"),
+            "source_count": obj.get("source_count"),
         })
-        return _obj
+        return _
 
 
