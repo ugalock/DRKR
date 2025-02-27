@@ -1,5 +1,4 @@
-# coding: utf-8
-
+# backend/app/schemas/user.py
 """
     DRKR API
 
@@ -14,16 +13,15 @@
 
 from __future__ import annotations
 import pprint
-import re  # noqa: F401
 import json
-from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
-from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
+from datetime import datetime
+from pydantic import BaseModel, model_validator, StrictInt, StrictStr
 from app.schemas.organization_member import OrganizationMember
 
 class User(BaseModel):
@@ -38,16 +36,31 @@ class User(BaseModel):
     default_role: Optional[StrictStr] = None
     auth_provider: Optional[StrictStr] = None
     picture_url: Optional[StrictStr] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    __properties: ClassVar[List[str]] = ["id", "external_id", "username", "email", "display_name", "default_role", "auth_provider", "picture_url", "created_at", "updated_at"]
+    organization_memberships: Optional[List[OrganizationMember]] = None
+    created_at: Optional[StrictStr] = None
+    updated_at: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["id", "external_id", "username", "email", "display_name", "default_role", "auth_provider", "picture_url", "organization_memberships", "created_at", "updated_at"]
 
     model_config = {
         "populate_by_name": True,
         "validate_assignment": True,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
 
+    @model_validator(mode='before')
+    @classmethod
+    def validate_datetimes(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, datetime):
+                    data[key] = value.isoformat()
+        else:
+            if hasattr(data, 'created_at') and isinstance(data.created_at, datetime):
+                data.created_at = data.created_at.isoformat()
+            if hasattr(data, 'updated_at') and isinstance(data.updated_at, datetime):
+                data.updated_at = data.updated_at.isoformat()
+        return data
 
     def to_str(self) -> str:
         """Returns the string representation of the model using alias"""
@@ -99,44 +112,8 @@ class User(BaseModel):
             "default_role": obj.get("default_role"),
             "auth_provider": obj.get("auth_provider"),
             "picture_url": obj.get("picture_url"),
+            "organization_memberships": obj.get("organization_memberships"),
             "created_at": obj.get("created_at"),
             "updated_at": obj.get("updated_at")
-        })
-        return _obj
-
-class UserProfile(User):
-    """
-    UserProfile extends User to include organization membership information
-    """
-    org_memberships: Optional[List[OrganizationMember]] = None
-    __properties: ClassVar[List[str]] = User._User__properties + ["org_memberships"]
-
-    model_config = {
-        "populate_by_name": True,
-        "validate_assignment": True,
-        "protected_namespaces": (),
-    }
-
-    @classmethod
-    def from_dict(cls, obj: Dict) -> Self:
-        """Create an instance of User from a dict"""
-        if obj is None:
-            return None
-
-        if not isinstance(obj, dict):
-            return cls.model_validate(obj)
-
-        _obj = cls.model_validate({
-            "id": obj.get("id"),
-            "external_id": obj.get("external_id"),
-            "username": obj.get("username"),
-            "email": obj.get("email"),
-            "display_name": obj.get("display_name"),
-            "default_role": obj.get("default_role"),
-            "auth_provider": obj.get("auth_provider"),
-            "picture_url": obj.get("picture_url"),
-            "created_at": obj.get("created_at"),
-            "updated_at": obj.get("updated_at"),
-            "org_memberships": obj.get("org_memberships")
         })
         return _obj

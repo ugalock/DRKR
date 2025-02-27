@@ -24,7 +24,7 @@ from fastapi import (
 )
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2AuthorizationCodeBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Optional
 
 from app.routers.auth_base import BaseAuth
@@ -112,8 +112,7 @@ async def auth_refresh_post(
     response_model_by_alias=True,
 )
 async def login_for_access_token(
-    code: str,
-    db: Session = Depends(get_db)
+    code: str
 ) -> AuthTokenResponse:
     """Exchange Auth0 code for access token"""
 
@@ -152,7 +151,7 @@ async def auth_callback(
     code: str = Query(..., description="Authorization code from Auth0"),
     state: str = Query(..., description="State parameter for CSRF protection"),
     auth_state: Optional[str] = Cookie(None, alias="auth_state"),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> RedirectResponse:
     """
     Callback endpoint to handle the redirect from Auth0 after a successful login.
@@ -166,11 +165,11 @@ async def auth_callback(
         raise HTTPException(status_code=400, detail="Invalid state parameter")
 
     # Exchange the authorization code for tokens
-    token_response = await login_for_access_token(code=code, db=db)
+    token_response = await login_for_access_token(code=code)
 
     # In a production app, you might store tokens in secure cookies or session here.
     # For demonstration, we set a cookie for the access token.
-    response = RedirectResponse(url="/dashboard", status_code=302)
+    response = RedirectResponse(url="/", status_code=302)
     response.set_cookie("access_token", token_response.access_token, httponly=True, secure=True)
     response.set_cookie("id_token", token_response.id_token, httponly=True, secure=True)
     # Optionally clear the auth_state cookie after validation

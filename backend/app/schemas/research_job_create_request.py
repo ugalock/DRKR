@@ -11,14 +11,10 @@
     Do not edit the class manually.
 """  # noqa: E501
 
-
 from __future__ import annotations
 import pprint
 import re  # noqa: F401
 import json
-
-
-
 
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
@@ -31,9 +27,12 @@ class ResearchJobCreateRequest(BaseModel):
     """
     ResearchJobCreateRequest
     """ # noqa: E501
-    prompt_text: Optional[StrictStr] = None
+    service: StrictStr
+    prompt: StrictStr
+    user_id: Optional[StrictStr] = None
+    model: Optional[StrictStr] = None
     model_params: Optional[Dict[str, Any]] = None
-    __properties: ClassVar[List[str]] = ["prompt_text", "model_params"]
+    __properties: ClassVar[List[str]] = ["service", "prompt", "user_id", "model", "model_params"]
 
     model_config = {
         "populate_by_name": True,
@@ -84,7 +83,10 @@ class ResearchJobCreateRequest(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "prompt_text": obj.get("prompt_text"),
+            "service": obj.get("service"),
+            "prompt": obj.get("prompt"),
+            "user_id": obj.get("user_id"),
+            "model": obj.get("model"),
             "model_params": obj.get("model_params")
         })
         return _obj

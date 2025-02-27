@@ -14,13 +14,9 @@
 
 from __future__ import annotations
 import pprint
-import re  # noqa: F401
 import json
 
-
-
-
-from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
+from pydantic import BaseModel, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
@@ -35,14 +31,15 @@ class OrganizationMember(BaseModel):
     organization_id: Optional[StrictInt] = None
     user_id: Optional[StrictInt] = None
     role: Optional[StrictStr] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: Optional[StrictStr] = None
+    updated_at: Optional[StrictStr] = None
     __properties: ClassVar[List[str]] = ["id", "organization_id", "user_id", "role", "created_at", "updated_at"]
 
     model_config = {
         "populate_by_name": True,
         "validate_assignment": True,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
 
 

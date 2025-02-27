@@ -17,10 +17,14 @@ class Settings(BaseSettings):
     AUTH0_CALLBACK_URL: str
     REDIS_URL: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    API_SCHEME: Optional[str] = "http"
     API_PORT: Optional[int] = 8000
+    API_HOST: Optional[str] = "localhost"
+    CLIENT_URL: Optional[str] = "http://localhost:3000"
+    OPENDR_URL: Optional[str] = "http://localhost:8001"
     # JWT Configuration
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    JWT_ALGORITHM: str = "RS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 3600
     
     class Config:
         env_file = os.path.join(FILE_PATH,"..", ".env")

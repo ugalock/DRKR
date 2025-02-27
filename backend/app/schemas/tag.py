@@ -11,15 +11,11 @@
     Do not edit the class manually.
 """  # noqa: E501
 
-
 from __future__ import annotations
 import pprint
-import re  # noqa: F401
 import json
-from datetime import datetime
 
-
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
+from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
@@ -36,13 +32,14 @@ class Tag(BaseModel):
     is_global: Optional[StrictBool] = None
     organization_id: Optional[StrictInt] = None # Only set for non-global tags
     user_id: Optional[StrictInt] = None # Only set for non-global tags
-    created_at: Optional[datetime] = None
+    created_at: Optional[StrictStr] = None
     __properties: ClassVar[List[str]] = ["id", "name", "description", "is_global", "organization_id", "user_id", "created_at"]
 
     model_config = {
         "populate_by_name": True,
         "validate_assignment": True,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
 
 

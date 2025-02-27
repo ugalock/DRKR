@@ -40,6 +40,7 @@ class Organization(BaseModel):
         "populate_by_name": True,
         "validate_assignment": True,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
 
 

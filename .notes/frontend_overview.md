@@ -118,10 +118,7 @@ This folder is an optional **feature-based** approach that can store domain-spec
 - **Purpose**: Abstract API calls, authentication, or external integrations. Generally stores logic that *talks to the backend or external services (like Pinecone)*.
 
 1. **`services/api/`**  
-   - `axiosConfig.ts`: Configures base URL, interceptors, or headers for all HTTP requests.  
-   - `userApi.ts`: Functions to call `/users` endpoints (create user, get user info, etc.).  
-   - `researchApi.ts`: Functions to call `/deep-research` endpoints (CRUD operations).  
-   - `tagsApi.ts`: Functions to handle creating/editing tags, retrieving sub-reddit style channels, etc.
+   - This has now moved to `hooks/useApi.ts` where each api router is defined as an object with methods for each endpoint.
 
 2. **`services/queryClient.ts`**  
    - Sets up a **React Query** `QueryClient`, possibly customizing behaviors like retries or caching.
@@ -144,7 +141,7 @@ This folder is an optional **feature-based** approach that can store domain-spec
 
 ### `hooks/`
 - **Purpose**: Custom React hooks. Typically:
-  - **useAuth**: Encapsulate login state, user roles, permission checks, or token refresh.  
+  - **useAuth**: Encapsulates all auth0 login state and getUserProfile() which returns the current user's UserProfile.  
   - **useFetchOrg**: Retrieve or cache organization data (members, roles).  
   - Additional domain-specific hooks: `useResearch()`, `useTags()`, etc.
 
@@ -153,7 +150,6 @@ This folder is an optional **feature-based** approach that can store domain-spec
 ### `context/`
 - **Purpose**: React Context providers for global or app-wide states.  
 - **Examples**:
-  - `AuthContext.tsx`: Houses user credentials and login status.  
   - `OrgContext.tsx`: Context for the currently active organization, membership role, etc.
 
 *(Alternatively, you might merge these into `store/` if using a single global store or rely on feature-based contexts in `features/`.)*

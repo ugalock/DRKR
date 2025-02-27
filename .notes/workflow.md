@@ -42,8 +42,8 @@ This section outlines the step-by-step plan for building out the DRKR project, m
   [ ] Orchestrate the deep research workflow: fetching prompt data, interfacing with LLMs, chunking texts, and storing results.
 [ ] **Pinecone Integration (`services/pinecone_service.py`):**  
   [ ] Handle embedding generation and interactions with the Pinecone vector database.
-[ ] **Authentication Utilities (`services/authentication.py`):**  
-  [ ] Consolidate logic for JWT handling and OAuth2 integrations.
+[✔] **Authentication Utilities (`services/authentication.py`):**  
+  [✔] Consolidate logic for JWT handling and OAuth2 integrations.
 
 ## 6. Celery Integration
 [ ] **Celery Configuration:**  
@@ -94,24 +94,24 @@ This section outlines the step-by-step plan for building out the DRKR project, m
 
 ### 8.4. API Layer & React Query Configuration
 1. **Axios & Query Client**  
-   [✔] In `services/api/axiosConfig.ts`, configure base URL, interceptors for JWT.  
+   [✔] In `hooks/useApi.ts`, configure base URL, interceptors for JWT.  
    [✔] In `services/queryClient.ts`, create the `QueryClient` with caching/retry rules.  
    [✔] **AI Reminder**: Suggest best practices (e.g., exponential backoff, offline support) if relevant.
 
 2. **Endpoints**  
-   [ ] `services/api/userApi.ts`, `services/api/researchApi.ts`, `services/api/tagsApi.ts`, etc.  
-   [ ] Implement each function to **CRUD** data from the backend.  
-   [ ] **AI Reminder**: Confirm endpoints align with the backend's routes (FastAPI). Flag mismatches in request/response formats. ALWAYS CHECK THE BACKEND FOR SCHEMA DEFINITIONS.
+   [✔] `userApi`, `researchApi`, `tagsApi`, etc. implemented in `hooks/useApi.ts`
+   [✔] Implement each function to **CRUD** data from the backend.  
+   [✔] **AI Reminder**: Confirm endpoints align with the backend's routes (FastAPI). Flag mismatches in request/response formats. ALWAYS CHECK THE BACKEND FOR SCHEMA DEFINITIONS.
 
 ### 8.5. Page-Level Components
 1. **`pages/Home/`**  
-   [ ] Show a dashboard or feed of recent "deep research" items (public or user-specific).
-   [ ] Optionally highlight top tags or trending items.  
-   [ ] **AI Reminder**: Provide quick navigation for new user sign-up or login flows.
+   [✔] Show a dashboard or feed of recent "deep research" items (public and  user/org-specific).
+   [✔] Optionally highlight top tags or trending items.  
+   [✔] **AI Reminder**: Provide quick navigation for new user sign-up or login flows.
 
 2. **`pages/Auth/`**  
-   [ ] Login and register pages. Possibly an OAuth callback route.  
-   [ ] **AI Reminder**: Ensure form validation and helpful error messages.
+   [✔] Login and register pages. Possibly an OAuth callback route.  
+   [✔] **AI Reminder**: Ensure form validation and helpful error messages.
 
 3. **`pages/Research/`**  
    [ ] List all accessible deep research items.  

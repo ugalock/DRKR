@@ -1,9 +1,8 @@
 from __future__ import annotations
 import pprint
 import json
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, StrictStr
-from typing import Any, ClassVar, Dict, List
+from pydantic import BaseModel, StrictStr, StrictInt, StrictBool
+from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
 except ImportError:
@@ -13,12 +12,14 @@ class ApiKeyResponse(BaseModel):
     """
     ApiKeyResponse
     """
-    key: StrictStr
+    token: StrictStr
     name: StrictStr
-    created_at: datetime
-    expires_at: datetime
-
-    __properties: ClassVar[List[str]] = ["key", "name", "created_at", "expires_at"]
+    user_id: Optional[StrictInt] = None
+    organization_id: Optional[StrictInt] = None
+    created_at: StrictStr
+    expires_at: StrictStr
+    is_active: Optional[StrictBool] = True
+    __properties: ClassVar[List[str]] = ["token", "name", "user_id", "organization_id", "is_active", "created_at", "expires_at"]
 
     model_config = {
         "populate_by_name": True,
@@ -59,8 +60,11 @@ class ApiKeyResponse(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "key": obj.get("key"),
+            "token": obj.get("token"),
             "name": obj.get("name"),
+            "user_id": obj.get("user_id"),
+            "organization_id": obj.get("organization_id"),
+            "is_active": obj.get("is_active"),
             "created_at": obj.get("created_at"),
             "expires_at": obj.get("expires_at")
         })

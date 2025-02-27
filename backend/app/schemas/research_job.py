@@ -11,16 +11,12 @@
     Do not edit the class manually.
 """  # noqa: E501
 
-
 from __future__ import annotations
 import pprint
 import re  # noqa: F401
 import json
 
-
-
-
-from pydantic import BaseModel, ConfigDict, StrictStr, field_validator
+from pydantic import BaseModel, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
@@ -31,9 +27,19 @@ class ResearchJob(BaseModel):
     """
     ResearchJob
     """ # noqa: E501
-    job_id: Optional[StrictStr] = None
-    status: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["job_id", "status"]
+    job_id: StrictStr
+    user_id: StrictStr
+    owner_user_id: Optional[StrictStr] = None
+    owner_org_id: Optional[StrictStr] = None
+    visibility: StrictStr
+    status: StrictStr
+    service: StrictStr
+    model_name: StrictStr
+    model_params: Optional[Dict[str, Any]] = None
+    deep_research_id: Optional[StrictStr] = None
+    created_at: Optional[StrictStr] = None
+    updated_at: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["job_id", "user_id", "owner_user_id", "owner_org_id", "visibility", "status", "service", "model_name", "model_params", "deep_research_id", "created_at", "updated_at"]
 
     @field_validator('status')
     def status_validate_enum(cls, value):
@@ -41,14 +47,25 @@ class ResearchJob(BaseModel):
         if value is None:
             return value
 
-        if value not in ('pending', 'running', 'completed', 'failed',):
-            raise ValueError("must be one of enum values ('pending', 'running', 'completed', 'failed')")
+        if value not in ('pending_answers', 'running', 'completed', 'failed', 'cancelled'):
+            raise ValueError("must be one of enum values ('pending_answers', 'running', 'completed', 'failed', 'cancelled')")
+        return value
+
+    @field_validator('visibility')
+    def visibility_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in ('private', 'public', 'org'):
+            raise ValueError("must be one of enum values ('private', 'public', 'org')")
         return value
 
     model_config = {
         "populate_by_name": True,
         "validate_assignment": True,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
 
 
@@ -95,7 +112,17 @@ class ResearchJob(BaseModel):
 
         _obj = cls.model_validate({
             "job_id": obj.get("job_id"),
-            "status": obj.get("status")
+            "user_id": obj.get("user_id"),
+            "owner_user_id": obj.get("owner_user_id"),
+            "owner_org_id": obj.get("owner_org_id"),
+            "visibility": obj.get("visibility"),
+            "status": obj.get("status"),
+            "service": obj.get("service"),
+            "model_name": obj.get("model_name"),
+            "model_params": obj.get("model_params"),
+            "deep_research_id": obj.get("deep_research_id"),
+            "created_at": obj.get("created_at"),
+            "updated_at": obj.get("updated_at"),
         })
         return _obj
 

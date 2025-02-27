@@ -1,7 +1,8 @@
 # backend/app/routers/api_keys.py
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import datetime, timedelta
 import secrets
 
@@ -25,7 +26,7 @@ router = APIRouter()
 async def create_api_key(
     api_key_data: ApiKeyCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     org_id: Optional[int] = Query(None, description="Organization ID for the API key")
 ) -> ApiKeyResponse:
     """Create a new API key for the current user"""
@@ -37,28 +38,35 @@ async def create_api_key(
     
     # Create new API key record
     db_api_key = ApiKey(
-        key=api_key,
+        token=api_key,
         name=api_key_data.name,
-        user_id=current_user.id,
+        user_id=current_user.id if not org_id else None,
         organization_id=org_id,
         expires_at=expires_at
     )
     
-    db.add(db_api_key)
-    db.commit()
-    db.refresh(db_api_key)
+    await db.add(db_api_key)
+    await db.commit()
+    await db.refresh(db_api_key)
+    
+    # Convert datetime objects to ISO string format for Pydantic validation
+    created_at_str = db_api_key.created_at.isoformat() if db_api_key.created_at else None
+    expires_at_str = db_api_key.expires_at.isoformat() if db_api_key.expires_at else None
     
     return ApiKeyResponse(
-        key=api_key,
+        token=api_key,
         name=db_api_key.name,
-        created_at=db_api_key.created_at,
-        expires_at=db_api_key.expires_at
+        user_id=db_api_key.user_id,
+        organization_id=db_api_key.organization_id,
+        created_at=created_at_str,
+        expires_at=expires_at_str,
+        is_active=db_api_key.is_active
     )
 
 @router.get(
     "/api-keys",
     responses={
-        200: {"model": list[ApiKeyResponse], "description": "List of API keys"},
+        200: {"model": List[ApiKeyResponse], "description": "List of API keys"},
     },
     tags=["api-keys"],
     summary="List user API keys",
@@ -66,13 +74,16 @@ async def create_api_key(
 )
 async def list_api_keys(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-) -> list[ApiKeyResponse]:
+    db: AsyncSession = Depends(get_db)
+) -> List[ApiKeyResponse]:
     """List all API keys for the current user"""
-    return db.query(ApiKey).filter(
-        ApiKey.user_id == current_user.id,
-        ApiKey.is_active == True
-    ).all()
+    query = select(ApiKey).where(
+        ApiKey.user_id == current_user.id
+    )
+    result = await db.execute(query)
+    api_keys = result.scalars().all()
+    
+    return [ApiKeyResponse.model_validate(api_key) for api_key in api_keys]
 
 @router.delete(
     "/api-keys/{key_id}",
@@ -84,20 +95,22 @@ async def list_api_keys(
     response_model_by_alias=True,
 )
 async def revoke_api_key(
-    key_id: int,
+    key_id: int = Path(..., description="API key ID"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> dict:
     """Revoke an API key"""
-    api_key = db.query(ApiKey).filter(
+    stmt = select(ApiKey).where(
         ApiKey.id == key_id,
         ApiKey.user_id == current_user.id
-    ).first()
+    )
+    result = await db.execute(stmt)
+    api_key = result.scalars().first()
     
     if not api_key:
         raise HTTPException(status_code=404, detail="API key not found")
     
     api_key.is_active = False
-    db.commit()
+    await db.commit()
     
     return {"message": "API key revoked successfully"} 

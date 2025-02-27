@@ -16,7 +16,6 @@ from __future__ import annotations
 import pprint
 import re  # noqa: F401
 import json
-from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
@@ -25,6 +24,13 @@ try:
 except ImportError:
     from typing_extensions import Self
 
+from app.schemas.comment import Comment
+from app.schemas.rating import Rating
+from app.schemas.research_chunk import ResearchChunk
+from app.schemas.research_summary import ResearchSummary
+from app.schemas.research_source import ResearchSource
+from app.schemas.research_auto_metadata import ResearchAutoMetadata
+from app.schemas.research_job import ResearchJob
 class DeepResearch(BaseModel):
     """
     DeepResearch
@@ -38,16 +44,24 @@ class DeepResearch(BaseModel):
     prompt_text: StrictStr
     final_report: StrictStr
     model_name: Optional[StrictStr] = None
-    model_params: Optional[StrictStr] = None
+    model_params: Optional[Dict[str, Any]] = None
     source_count: Optional[StrictInt] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    __properties: ClassVar[List[str]] = ["id", "user_id", "owner_user_id", "owner_org_id", "visibility", "title", "prompt_text", "final_report", "model_name", "model_params", "source_count", "created_at", "updated_at"]
+    created_at: Optional[StrictStr] = None
+    updated_at: Optional[StrictStr] = None
+    chunks: Optional[List[ResearchChunk]] = None
+    summaries: Optional[List[ResearchSummary]] = None
+    sources: Optional[List[ResearchSource]] = None
+    auto_metadata: Optional[List[ResearchAutoMetadata]] = None
+    comments: Optional[List[Comment]] = None
+    ratings: Optional[List[Rating]] = None  
+    research_job: Optional[ResearchJob] = None
+    __properties: ClassVar[List[str]] = ["id", "user_id", "owner_user_id", "owner_org_id", "visibility", "title", "prompt_text", "final_report", "model_name", "model_params", "source_count", "created_at", "updated_at", "chunks", "summaries", "sources", "auto_metadata", "comments", "ratings", "research_job"]
 
     model_config = {
         "populate_by_name": True,
         "validate_assignment": True,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
 
 
@@ -104,7 +118,16 @@ class DeepResearch(BaseModel):
             "model_name": obj.get("model_name"),
             "model_params": obj.get("model_params"),
             "source_count": obj.get("source_count"),
+            "created_at": obj.get("created_at"),
+            "updated_at": obj.get("updated_at"),
+            "chunks": [ResearchChunk.from_dict(item) for item in obj.get("chunks", [])] if obj.get("chunks") else None,
+            "summaries": [ResearchSummary.from_dict(item) for item in obj.get("summaries", [])] if obj.get("summaries") else None,
+            "sources": [ResearchSource.from_dict(item) for item in obj.get("sources", [])] if obj.get("sources") else None,
+            "auto_metadata": [ResearchAutoMetadata.from_dict(item) for item in obj.get("auto_metadata", [])] if obj.get("auto_metadata") else None,
+            "comments": [Comment.from_dict(item) for item in obj.get("comments", [])] if obj.get("comments") else None,
+            "ratings": [Rating.from_dict(item) for item in obj.get("ratings", [])] if obj.get("ratings") else None,
+            "research_job": ResearchJob.from_dict(obj.get("research_job")) if obj.get("research_job") else None,
         })
-        return _
+        return _obj
 
 

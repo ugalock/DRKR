@@ -34,14 +34,15 @@ class Organization(Base):
     updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
     members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
-    # e.g. api_keys = relationship("ApiKey", back_populates="organization", ...)
+    api_keys = relationship("ApiKey", back_populates="organization")
+    research_jobs = relationship("ResearchJob", back_populates="organization", foreign_keys="ResearchJob.owner_org_id")
 
 # 2) users
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    external_id = Column(String(255), unique=True)
+    external_id = Column(String(255), unique=True, nullable=False)
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     display_name = Column(String(100))
@@ -56,8 +57,13 @@ class User(Base):
             auth_provider IN ('google-oauth2', 'github', 'facebook', 'linkedin', 'twitter')
         """, name="chk_user_auth_provider"),
     )
-    # Relationship examples
-    # deep_research_created = relationship("DeepResearch", back_populates="owner_user") # etc.
+    
+    # Relationships - added explicit back_populates
+    organization_memberships = relationship("OrganizationMember", back_populates="user", lazy="selectin")
+    api_keys = relationship("ApiKey", back_populates="user", foreign_keys="ApiKey.user_id")
+    research_ratings = relationship("ResearchRating", back_populates="user")
+    comments = relationship("ResearchComment", back_populates="user")
+    research_jobs = relationship("ResearchJob", back_populates="user", foreign_keys="ResearchJob.user_id")
 
 # 3) organization_members
 class OrganizationMember(Base):
@@ -74,16 +80,18 @@ class OrganizationMember(Base):
     )
 
     organization = relationship("Organization", back_populates="members")
-    user = relationship("User", backref="organization_memberships")
+    user = relationship("User", back_populates="organization_memberships")
 
 # 4) api_keys
 class ApiKey(Base):
     __tablename__ = "api_keys"
 
     id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"))
     token = Column(String(255), unique=True, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
     expires_at = Column(DateTime(timezone=False))
 
@@ -95,12 +103,12 @@ class ApiKey(Base):
         """, name="chk_api_key_owner"),
     )
 
-    # You could define relationships if you want:
-    user = relationship("User", backref="api_keys")
-    organization = relationship("Organization", backref="api_keys")
+    # Changed backref to back_populates
+    user = relationship("User", back_populates="api_keys")
+    organization = relationship("Organization", back_populates="api_keys")
 
 # We'll define a Python Enum for 'visibility' to match your Postgres enum.
-VisibilityEnum = PGEnum("private", "public", "org", name="visibility", create_type=True)
+VisibilityEnum = PGEnum("private", "public", "org", name="visibility", create_type=False)
 
 # 5) deep_research
 class DeepResearch(Base):
@@ -129,11 +137,14 @@ class DeepResearch(Base):
     prompt_embedding = Column(VECTOR(3072))
     report_embedding = Column(VECTOR(3072))
 
-    # Relationships (optional)
-    # e.g. user = relationship("User", foreign_keys=[user_id])
-    # If you want to track the "owner" user as well:
-    # owner_user = relationship("User", foreign_keys=[owner_user_id])
-    # owner_org = relationship("Organization", foreign_keys=[owner_org_id])
+    # Added explicit relationships with back_populates
+    chunks = relationship("ResearchChunk", back_populates="deep_research", cascade="all, delete-orphan")
+    summaries = relationship("ResearchSummary", back_populates="deep_research", cascade="all, delete-orphan")
+    sources = relationship("ResearchSource", back_populates="deep_research", cascade="all, delete-orphan")
+    ratings = relationship("ResearchRating", back_populates="deep_research")
+    comments = relationship("ResearchComment", back_populates="deep_research")
+    auto_metadata = relationship("ResearchAutoMetadata", back_populates="deep_research")
+    research_job = relationship("ResearchJob", back_populates="deep_research", foreign_keys="ResearchJob.deep_research_id")
 
 # 6) research_chunks
 class ResearchChunk(Base):
@@ -147,7 +158,7 @@ class ResearchChunk(Base):
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
     updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
-    deep_research = relationship("DeepResearch", backref=backref("chunks", cascade="all, delete-orphan"))
+    deep_research = relationship("DeepResearch", back_populates="chunks")
 
 # 7) research_summaries
 class ResearchSummary(Base):
@@ -160,7 +171,7 @@ class ResearchSummary(Base):
     summary_text = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
-    deep_research = relationship("DeepResearch", backref=backref("summaries", cascade="all, delete-orphan"))
+    deep_research = relationship("DeepResearch", back_populates="summaries")
 
 # 8) research_sources
 class ResearchSource(Base):
@@ -175,7 +186,7 @@ class ResearchSource(Base):
     source_type = Column(String(50))  # e.g. "website", "paper", "book"
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
-    deep_research = relationship("DeepResearch", backref=backref("sources", cascade="all, delete-orphan"))
+    deep_research = relationship("DeepResearch", back_populates="sources")
 
 # 9) domain_co_occurrences
 class DomainCoOccurrence(Base):
@@ -240,8 +251,6 @@ class Tag(Base):
           postgresql_where="user_id IS NOT NULL")
 
 # 11) deep_research_tags (join table)
-from sqlalchemy import Table, ForeignKeyConstraint
-
 class DeepResearchTag(Base):
     __tablename__ = "deep_research_tags"
 
@@ -262,8 +271,8 @@ class ResearchRating(Base):
         UniqueConstraint("deep_research_id", "user_id", name="uq_research_user_rating"),
     )
 
-    deep_research = relationship("DeepResearch", backref="ratings")
-    user = relationship("User", backref="research_ratings")
+    deep_research = relationship("DeepResearch", back_populates="ratings")
+    user = relationship("User", back_populates="research_ratings")
 
 # 13) research_comments
 class ResearchComment(Base):
@@ -277,8 +286,8 @@ class ResearchComment(Base):
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
     updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
-    deep_research = relationship("DeepResearch", backref="comments")
-    user = relationship("User", backref="comments")
+    deep_research = relationship("DeepResearch", back_populates="comments")
+    user = relationship("User", back_populates="comments")
 
 # 14) research_auto_metadata
 class ResearchAutoMetadata(Base):
@@ -291,4 +300,108 @@ class ResearchAutoMetadata(Base):
     confidence_score = Column(Integer)  # or Float
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
-    deep_research = relationship("DeepResearch", backref="auto_metadata")
+    deep_research = relationship("DeepResearch", back_populates="auto_metadata")
+
+# 15) research_jobs
+class ResearchJob(Base):
+    __tablename__ = "research_jobs"
+
+    id = Column(Integer, primary_key=True)
+    job_id = Column(String(255), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    owner_org_id = Column(Integer, ForeignKey("organizations.id", ondelete="SET NULL"))
+    visibility = Column(VisibilityEnum, nullable=False, server_default="private")
+    status = Column(String(50), nullable=False)
+    service = Column(String(100), nullable=False)
+    model_name = Column(String(100), nullable=False)
+    model_params = Column(JSONB)
+    deep_research_id = Column(Integer, ForeignKey("deep_research.id", ondelete="SET NULL"))
+    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now(), onupdate=sql_func.now())
+
+    __table_args__ = (
+        CheckConstraint("""
+            status IN ('pending_answers', 'running', 'completed', 'failed', 'cancelled')
+        """, name="chk_research_job_status"),
+        UniqueConstraint("job_id", "service", name="uq_research_job_job_id_service"),
+    )
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="research_jobs")
+    deep_research = relationship("DeepResearch", foreign_keys=[deep_research_id], back_populates="research_job")
+    organization = relationship("Organization", foreign_keys=[owner_org_id], back_populates="research_jobs")
+
+# 16) research_services
+class ResearchService(Base):
+    """
+    Model for research services like "open-dr"
+    Stores the main service information
+    """
+    __tablename__ = "research_services"
+    
+    id = Column(Integer, primary_key=True)
+    service_key = Column(String(50), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    url = Column(String(255))
+    default_model_id = Column(Integer, ForeignKey("ai_models.id"), nullable=True)
+    created_at = Column(String, server_default=func.now())
+    updated_at = Column(String, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    default_model = relationship("AiModel", foreign_keys=[default_model_id], lazy="joined")
+    models = relationship("AiModel", secondary="research_service_models", back_populates="services")
+    service_models = relationship("ResearchServiceModel", back_populates="service", lazy='joined', 
+                             innerjoin=False, join_depth=1, overlaps="models")
+
+# 17) ai_models
+class AiModel(Base):
+    """
+    Model for AI models with their specifications
+    Can be used by multiple research services
+    """
+    __tablename__ = "ai_models"
+    
+    id = Column(Integer, primary_key=True)
+    model_key = Column(String(255), unique=True, nullable=False, index=True)
+    default_params = Column(JSONB, nullable=False)
+    max_tokens = Column(Integer, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(String, server_default=func.now())
+    updated_at = Column(String, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    services = relationship("ResearchService", secondary="research_service_models", 
+                            back_populates="models", 
+                            overlaps="service_models")
+    service_models = relationship("ResearchServiceModel", back_populates="model",
+                                 overlaps="models,services")
+
+
+# 18) research_service_models
+class ResearchServiceModel(Base):
+    """
+    Linking table between Research Services and AI Models
+    Allows for many-to-many relationship
+    """
+    __tablename__ = "research_service_models"
+    
+    id = Column(Integer, primary_key=True)
+    service_id = Column(Integer, ForeignKey("research_services.id", ondelete="CASCADE"), nullable=False)
+    model_id = Column(Integer, ForeignKey("ai_models.id", ondelete="CASCADE"), nullable=False)
+    is_default = Column(Boolean, default=False)
+    created_at = Column(String, server_default=func.now())
+    updated_at = Column(String, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    service = relationship("ResearchService", back_populates="service_models",
+                          overlaps="models,services")
+    model = relationship("AiModel", back_populates="service_models",
+                        overlaps="models,services")
+    
+    # Make sure each model is linked to a service only once
+    __table_args__ = (
+        UniqueConstraint("service_id", "model_id", name="uq_service_model"),
+    )
+    

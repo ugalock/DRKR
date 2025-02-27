@@ -73,7 +73,7 @@ def test_orgs_id_members_post(client: TestClient):
 
     Add a user to the organization
     """
-    org_membership_request = {"role":"role","user_id":0}
+    org_membership_request = {"role":"member","user_id":0}
 
     headers = {
     }

@@ -1,0 +1,43 @@
+{
+    "open-dr": {
+        "name": "Open Deep Research",
+        "description": "Open Deep Research is a research service that allows you to create and manage research jobs.",
+        "url": "{{OPENDR_URL}}",
+        "models": {
+            "o3-mini": {
+                "default_params": {
+                    "temperature": 0.3,
+                    "reasoning_effort": "medium"
+                },
+                "max_tokens": 200000
+            },
+            "o1": {
+                "default_params": {
+                    "temperature": 0.3,
+                    "reasoning_effort": "medium"
+                },
+                "max_tokens": 200000
+            },
+            "o1-preview": {
+                "default_params": {
+                    "temperature": 0.3,
+                    "reasoning_effort": "medium"
+                },
+                "max_tokens": 200000
+            },
+            "chatgpt-4o-latest": {
+                "default_params": {
+                    "temperature": 0.3
+                },
+                "max_tokens": 128000
+            },
+            "gpt-4o-mini": {
+                "default_params": {
+                    "temperature": 0.3
+                },
+                "max_tokens": 128000
+            }
+        },
+        "default_model": "o3-mini"
+    }
+}

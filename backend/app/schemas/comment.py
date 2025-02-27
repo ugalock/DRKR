@@ -35,12 +35,14 @@ class Comment(BaseModel):
     comment_text: Optional[StrictStr] = None
     user_id: Optional[StrictInt] = None
     deep_research_id: Optional[StrictInt] = None
-    __properties: ClassVar[List[str]] = ["id", "comment_text", "user_id", "deep_research_id"]
+    parent_comment_id: Optional[StrictInt] = None
+    __properties: ClassVar[List[str]] = ["id", "comment_text", "user_id", "deep_research_id", "parent_comment_id"]
 
     model_config = {
         "populate_by_name": True,
         "validate_assignment": True,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
 
 
@@ -89,7 +91,8 @@ class Comment(BaseModel):
             "id": obj.get("id"),
             "comment_text": obj.get("comment_text"),
             "user_id": obj.get("user_id"),
-            "deep_research_id": obj.get("deep_research_id")
+            "deep_research_id": obj.get("deep_research_id"),
+            "parent_comment_id": obj.get("parent_comment_id")
         })
         return _obj
 

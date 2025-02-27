@@ -1,0 +1,281 @@
+openapi: 3.0.0
+info:
+  title: Deep Research API
+  description: API for performing deep research with follow-up questions and answers
+  version: 1.0.0
+paths:
+  /research/start:
+    post:
+      summary: Initialize a research session with an initial prompt
+      description: Creates a new research session and generates follow-up questions
+      operationId: startResearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchRequest'
+      responses:
+        '200':
+          description: Successfully started research session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartResearchResponse'
+  /research/answer:
+    post:
+      summary: Provide answers to follow-up questions and start the research process
+      description: Submits answers to previously generated follow-up questions and begins the actual research process
+      operationId: provideAnswers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+      responses:
+        '200':
+          description: Successfully submitted answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerResponse'
+        '400':
+          description: Bad request - either session is not waiting for answers or wrong number of answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /research/status:
+    get:
+      summary: Check the status of a research session
+      description: Retrieves the current status and results (if complete) of a research session
+      operationId: getResearchStatus
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the user
+        - name: job_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Research session identifier
+      responses:
+        '200':
+          description: Research status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /research/cancel:
+    get:
+      summary: Cancel a research session
+      description: Cancels an in-progress research session
+      operationId: cancelResearchStatus
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the user
+        - name: job_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Research session identifier
+      responses:
+        '200':
+          description: Successfully canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '418':
+          description: Session already complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /research/list:
+    get:
+      summary: List recent research sessions for a user
+      description: Retrieves all active research sessions for a specific user
+      operationId: getResearchSessions
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the user
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSessionsResponse'
+components:
+  schemas:
+    ResearchRequest:
+      type: object
+      required:
+        - user_id
+        - prompt
+      properties:
+        user_id:
+          type: string
+          description: Unique identifier for the user
+        prompt:
+          type: string
+          description: Initial research prompt
+        breadth:
+          type: integer
+          description: Breadth of research (number of parallel paths to explore)
+          default: 4
+        depth:
+          type: integer
+          description: Depth of research (how deep to follow each path)
+          default: 2
+        model:
+          type: string
+          description: Language model to use (e.g. "o3-mini", "chatgpt-4o-latest", "gpt-4o-mini")
+          nullable: true
+        model_params:
+          type: object
+          description: Additional parameters for the language model
+          nullable: true
+          additionalProperties: true
+    AnswerRequest:
+      type: object
+      required:
+        - user_id
+        - job_id
+        - answers
+      properties:
+        user_id:
+          type: string
+          description: Unique identifier for the user
+        job_id:
+          type: string
+          description: Research session identifier
+        answers:
+          type: array
+          description: Answers to follow-up questions (must match the number of questions)
+          items:
+            type: string
+    StartResearchResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          description: Unique identifier for the research session
+        status:
+          type: string
+          description: Current status of the research session
+          enum: [pending_answers, running, complete, cancelled, failed]
+        questions:
+          type: array
+          description: Follow-up questions for the user to answer
+          items:
+            type: string
+    AnswerResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Current status of the research session
+          enum: [running]
+    StatusResponse:
+      oneOf:
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [pending_answers, running, cancelled, failed]
+          required:
+            - status
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [complete]
+            results:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  description: Combined prompt with initial query and follow-up answers
+                report:
+                  type: string
+                  description: Final research report
+                sources:
+                  type: array
+                  description: List of sources used in the research
+                  items:
+                    type: string
+          required:
+            - status
+            - results
+    CancelResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status after cancellation
+          enum: [cancelled]
+      required:
+        - status
+    ListSessionsResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          description: List of research sessions
+          items:
+            type: object
+            properties:
+              job_id:
+                type: string
+                description: Unique identifier for the research session
+              status:
+                type: string
+                description: Current status of the research session
+                enum: [pending_answers, running, complete, cancelled, failed]
+            required:
+              - job_id
+              - status
+      required:
+        - sessions
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      required:
+        - detail
