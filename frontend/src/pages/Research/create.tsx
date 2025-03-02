@@ -21,12 +21,14 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { encoding_for_model, type TiktokenModel, type Tiktoken } from 'tiktoken';
+import debounce from 'lodash/debounce';
+
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { useApi } from '../../hooks/useApi';
 import { ResearchService, AiModel } from '../../types/research_service';
-import { encoding_for_model, type TiktokenModel, type Tiktoken } from 'tiktoken';
-import debounce from 'lodash/debounce';
+import { ResearchJob, ResearchJobCreateResponse } from '../../types/research_job';
 
 interface ModelParam {
   key: string;
@@ -90,7 +92,7 @@ const CreateResearchJobPage: React.FC = () => {
     };
 
     fetchServices();
-  }, [researchServicesApi]);
+  }, []);
 
   // Debounced token counter
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,7 +232,7 @@ const CreateResearchJobPage: React.FC = () => {
       });
       
       // Create the job
-      const result = await researchJobsApi.createResearchJob({
+      const result: ResearchJobCreateResponse = await researchJobsApi.createResearchJob({
         service: selectedService,
         model: selectedModel,
         prompt: prompt,

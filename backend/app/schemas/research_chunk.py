@@ -18,8 +18,8 @@ class ResearchChunk(BaseModel):
     chunk_index: StrictInt
     chunk_type: Optional[StrictStr] = None
     chunk_text: StrictStr
-    created_at: Optional[StrictStr] = None
-    updated_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     __properties: ClassVar[List[str]] = ["id", "deep_research_id", "chunk_index", "chunk_type", "chunk_text", "created_at", "updated_at"]
 
     model_config = {

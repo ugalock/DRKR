@@ -20,7 +20,7 @@ class ResearchSource(BaseModel):
     source_excerpt: Optional[StrictStr] = None
     domain: Optional[StrictStr] = None
     source_type: Optional[StrictStr] = None
-    created_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
     __properties: ClassVar[List[str]] = ["id", "deep_research_id", "source_url", "source_title", "source_excerpt", "domain", "source_type", "created_at"]
 
     model_config = {

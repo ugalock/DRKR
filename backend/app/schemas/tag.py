@@ -32,7 +32,7 @@ class Tag(BaseModel):
     is_global: Optional[StrictBool] = None
     organization_id: Optional[StrictInt] = None # Only set for non-global tags
     user_id: Optional[StrictInt] = None # Only set for non-global tags
-    created_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
     __properties: ClassVar[List[str]] = ["id", "name", "description", "is_global", "organization_id", "user_id", "created_at"]
 
     model_config = {

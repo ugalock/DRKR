@@ -37,8 +37,8 @@ class User(BaseModel):
     auth_provider: Optional[StrictStr] = None
     picture_url: Optional[StrictStr] = None
     organization_memberships: Optional[List[OrganizationMember]] = None
-    created_at: Optional[StrictStr] = None
-    updated_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     __properties: ClassVar[List[str]] = ["id", "external_id", "username", "email", "display_name", "default_role", "auth_provider", "picture_url", "organization_memberships", "created_at", "updated_at"]
 
     model_config = {

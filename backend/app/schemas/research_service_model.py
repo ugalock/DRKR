@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-
+from typing import Optional
 class ResearchServiceModelBase(BaseModel):
     """Base schema for research service model relationships"""
     service_id: int
@@ -13,8 +13,8 @@ class ResearchServiceModelCreate(ResearchServiceModelBase):
 class ResearchServiceModel(ResearchServiceModelBase):
     """Schema for a complete research service model relationship"""
     id: int
-    created_at: str
-    updated_at: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     model: "AiModelInResearchService"
 
     model_config = ConfigDict(from_attributes=True)

@@ -26,6 +26,7 @@ from app.schemas.extra_models import TokenModel  # noqa: F401
 from pydantic import StrictStr
 from app.schemas.research_job import ResearchJob
 from app.schemas.research_job_create_request import ResearchJobCreateRequest
+from app.schemas.research_job_create_response import ResearchJobCreateResponse
 from app.schemas.research_job_update_request import ResearchJobUpdateRequest
 from app.schemas.research_job_get_request import ResearchJobGetRequest
 from app.schemas.research_job_answer_request import ResearchJobAnswerRequest
@@ -195,7 +196,7 @@ async def research_jobs_id_patch(
 
 @router.post(
     "/research-jobs",
-    response_model=ResearchJobSchema,
+    response_model=ResearchJobCreateResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Research job started"},
@@ -209,7 +210,7 @@ async def research_jobs_post(
     request: ResearchJobCreateRequest = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> ResearchJobSchema:
+) -> ResearchJobCreateResponse:
     """Start a new research job."""
     result = await research_service.start_job(
         db=db,
@@ -219,7 +220,7 @@ async def research_jobs_post(
         model=request.model,
         model_params=request.model_params
     )
-    return result["job"]
+    return result
 
 @router.post(
     "/research-jobs/answer",

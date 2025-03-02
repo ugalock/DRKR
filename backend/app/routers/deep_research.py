@@ -256,7 +256,7 @@ async def research_post(
     )
     
     # Save to database
-    await db.add(research)
+    db.add(research)
     await db.commit()
     await db.refresh(research)
     

@@ -10,6 +10,7 @@ export interface ResearchJob {
     visibility: Visibility;
     status: ResearchJobStatus;
     service: string;
+    prompt: string;
     model_name: string;
     model_params?: Record<string, any>;
     deep_research_id?: string;
@@ -22,6 +23,11 @@ export interface ResearchJobCreateRequest {
     prompt: string;
     model?: string;
     model_params?: Record<string, any>;
+}
+
+export interface ResearchJobCreateResponse {
+    job: ResearchJob;
+    questions?: string[];
 }
 
 export interface ResearchJobUpdateRequest {

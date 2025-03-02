@@ -16,9 +16,10 @@ class ResearchServiceCreate(ResearchServiceBase):
 class ResearchService(ResearchServiceBase):
     """Schema for a complete research service"""
     id: int
-    created_at: str
-    updated_at: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     default_model: Optional["AiModelInResearchService"] = None
+    models: Optional[List["AiModelInResearchService"]] = None
     service_models: List["ResearchServiceModel"] = []
 
     model_config = ConfigDict(from_attributes=True)

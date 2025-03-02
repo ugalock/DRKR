@@ -9,9 +9,10 @@ import { ResearchService } from '../types/research_service';
 import { 
     ResearchJob, 
     ResearchJobCreateRequest, 
+    ResearchJobCreateResponse, 
     ResearchJobUpdateRequest, 
     ResearchJobGetRequest, 
-    ResearchJobAnswerRequest 
+    ResearchJobAnswerRequest
 } from '../types/research_job';
 
 import { useAuth } from './useAuth';
@@ -123,7 +124,7 @@ export const useApi = () => {
         },
 
         createResearchJob: async (data: ResearchJobCreateRequest) => {
-            const response = await api.post<ResearchJob>('/api/research-jobs', data);
+            const response = await api.post<ResearchJobCreateResponse>('/api/research-jobs', data);
             return response.data;
         },
 

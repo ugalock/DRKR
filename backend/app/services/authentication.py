@@ -173,7 +173,7 @@ async def create_user_if_not_exists(
             picture_url=payload.get("picture"),
         )
         
-        await db.add(user)
+        db.add(user)
         await db.commit()
         await db.refresh(user)
         

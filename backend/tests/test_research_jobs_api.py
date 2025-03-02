@@ -17,16 +17,17 @@ def mock_research_job():
     """Fixture for a mock research job"""
     now = datetime.now(timezone.utc).isoformat()  # ISO format string
     return ResearchJobModel(
-        id="1",  # String
+        id=1,
         job_id="job-123",
         user_id="1",  # String
         status="completed",
-        service="opendr",
-        model_name="gpt-4",
+        service="open-dr",
+        prompt="Research the impact of AI on healthcare",
+        model_name="gpt-4o-mini",
         visibility="private",
         created_at=now,
         updated_at=now,
-        model_params={"model": "gpt-4", "max_tokens": 1000},
+        model_params={"temperature": .6, "max_tokens": 2000},
         deep_research_id=None,
         owner_org_id=None,
         owner_user_id=None
@@ -37,16 +38,17 @@ def mock_pending_job():
     """Fixture for a pending research job"""
     now = datetime.now(timezone.utc).isoformat()  # ISO format string
     return ResearchJobModel(
-        id="2",  # String
+        id=2,
         job_id="job-456",
         user_id="1",  # String
         status="running",  # Valid enum value
-        service="opendr",
-        model_name="gpt-4",
+        service="open-dr",
+        prompt="Research the impact of AI on healthcare",
+        model_name="gpt-4o-mini",
         visibility="private",
         created_at=now,
         updated_at=now,
-        model_params={"model": "gpt-4", "max_tokens": 1000},
+        model_params={"temperature": .6, "max_tokens": 2000},
         deep_research_id=None,
         owner_org_id=None,
         owner_user_id=None
@@ -62,14 +64,15 @@ def test_research_jobs_post(client, mock_db, mock_user):
     # Create a valid DB model object that matches what's expected
     now = datetime.now(timezone.utc).isoformat()  # ISO format string
     mock_job_model = ResearchJobModel(
-        id="1",  # String
+        id=1,
         job_id="job-123",
         user_id=str(mock_user.id),  # String
         status="pending_answers",
-        service="opendr",
-        model_name="gpt-4",
+        service="open-dr",
+        prompt="Research the impact of AI on healthcare",
+        model_name="gpt-4o-mini",
         visibility="private",
-        model_params={"model": "gpt-4", "max_tokens": 2000},
+        model_params={"temperature": .6, "max_tokens": 2000},
         created_at=now,
         updated_at=now,
         deep_research_id=None,
@@ -83,14 +86,14 @@ def test_research_jobs_post(client, mock_db, mock_user):
         with patch("app.services.research.ResearchService.start_job", new_callable=AsyncMock) as mock_start_job:
             # Create test job request with required fields
             job_request = {
-                "service": "opendr",
+                "service": "open-dr",
                 "prompt": "Research the impact of AI on healthcare",
-                "model": "gpt-4",
-                "model_params": {"model": "gpt-4", "max_tokens": 2000}
+                "model": "gpt-4o-mini",
+                "model_params": {"temperature": .6, "max_tokens": 2000}
             }
             
             # Setup the mock start_job to return a dictionary with the job key
-            mock_start_job.return_value = {"job": mock_job_model}
+            mock_start_job.return_value = {"job": mock_job_model, "questions": ["Any particular aspects of the healthcare industry that you think are important to research?"]}
             
             # Mock check_research_job_permissions to return True
             with patch("app.routers.research_jobs.check_research_job_permissions", return_value=True):
@@ -100,11 +103,13 @@ def test_research_jobs_post(client, mock_db, mock_user):
                 # Verify the response
                 assert response.status_code == 201
                 response_json = response.json()
-                assert "job_id" in response_json
-                assert response_json["job_id"] == "job-123"
-                assert response_json["status"] == "pending_answers"
-                assert response_json["service"] == "opendr"
-                assert response_json["model_name"] == "gpt-4"
+                assert "job" in response_json
+                assert "questions" in response_json
+                assert response_json["questions"][0] == "Any particular aspects of the healthcare industry that you think are important to research?"
+                assert response_json["job"]["job_id"] == "job-123"
+                assert response_json["job"]["status"] == "pending_answers"
+                assert response_json["job"]["service"] == "open-dr"
+                assert response_json["job"]["model_name"] == "gpt-4o-mini"
 
 def test_research_jobs_job_id_get(client, mock_db, mock_user, mock_research_job):
     """Test getting a specific research job"""
@@ -127,8 +132,8 @@ def test_research_jobs_job_id_get(client, mock_db, mock_user, mock_research_job)
             assert "job_id" in response_json
             assert response_json["job_id"] == "job-123"
             assert response_json["status"] == "completed"
-            assert response_json["service"] == "opendr"
-            assert response_json["model_name"] == "gpt-4"
+            assert response_json["service"] == "open-dr"
+            assert response_json["model_name"] == "gpt-4o-mini"
 
 def test_research_jobs_job_id_get_not_found(client, mock_db, mock_user):
     """Test getting a research job that doesn't exist"""
@@ -151,11 +156,8 @@ def test_research_jobs_job_id_get_pending(client, mock_db, mock_user, mock_pendi
     with patch("app.services.research.ResearchService.poll_status", new_callable=AsyncMock) as mock_poll:
         # Set up the mock with results for a pending job
         mock_poll.return_value = {
-            "job": mock_pending_job,  # Return the actual model
-            "results": {
-                "status": "running",
-                "progress": 25
-            }
+            "job": mock_pending_job,
+            "results": None
         }
         
         # Mock the permission check to return True
@@ -166,9 +168,9 @@ def test_research_jobs_job_id_get_pending(client, mock_db, mock_user, mock_pendi
             # Verify the response
             assert response.status_code == 200
             response_json = response.json()
+            assert response_json["status"] == "running"
             assert "job_id" in response_json
             assert response_json["job_id"] == "job-456"
-            assert response_json["status"] == "running"
-            assert response_json["service"] == "opendr"
-            assert response_json["model_name"] == "gpt-4"
+            assert response_json["service"] == "open-dr"
+            assert response_json["model_name"] == "gpt-4o-mini"
 

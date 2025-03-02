@@ -30,7 +30,7 @@ class Rating(BaseModel):
     rating_value: Optional[StrictInt] = None
     user_id: Optional[StrictInt] = None
     deep_research_id: Optional[StrictInt] = None
-    created_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
     __properties: ClassVar[List[str]] = ["id", "rating_value", "user_id", "deep_research_id", "created_at"]
 
     model_config = {

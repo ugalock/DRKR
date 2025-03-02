@@ -314,6 +314,7 @@ class ResearchJob(Base):
     visibility = Column(VisibilityEnum, nullable=False, server_default="private")
     status = Column(String(50), nullable=False)
     service = Column(String(100), nullable=False)
+    prompt = Column(Text)
     model_name = Column(String(100), nullable=False)
     model_params = Column(JSONB)
     deep_research_id = Column(Integer, ForeignKey("deep_research.id", ondelete="SET NULL"))
@@ -350,10 +351,9 @@ class ResearchService(Base):
     updated_at = Column(String, server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    default_model = relationship("AiModel", foreign_keys=[default_model_id], lazy="joined")
+    default_model = relationship("AiModel", foreign_keys=[default_model_id])
     models = relationship("AiModel", secondary="research_service_models", back_populates="services")
-    service_models = relationship("ResearchServiceModel", back_populates="service", lazy='joined', 
-                             innerjoin=False, join_depth=1, overlaps="models")
+    service_models = relationship("ResearchServiceModel", back_populates="service", overlaps="models")
 
 # 17) ai_models
 class AiModel(Base):

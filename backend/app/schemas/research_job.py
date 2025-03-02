@@ -12,11 +12,12 @@
 """  # noqa: E501
 
 from __future__ import annotations
+from datetime import datetime
 import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, StrictStr, field_validator
+from pydantic import BaseModel, StrictStr, StrictInt, field_validator, model_validator
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
@@ -27,19 +28,21 @@ class ResearchJob(BaseModel):
     """
     ResearchJob
     """ # noqa: E501
+    id: Optional[StrictInt] = None
     job_id: StrictStr
-    user_id: StrictStr
-    owner_user_id: Optional[StrictStr] = None
-    owner_org_id: Optional[StrictStr] = None
+    user_id: int
+    owner_user_id: Optional[str] = None
+    owner_org_id: Optional[str] = None
     visibility: StrictStr
     status: StrictStr
     service: StrictStr
+    prompt: StrictStr
     model_name: StrictStr
     model_params: Optional[Dict[str, Any]] = None
-    deep_research_id: Optional[StrictStr] = None
-    created_at: Optional[StrictStr] = None
-    updated_at: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["job_id", "user_id", "owner_user_id", "owner_org_id", "visibility", "status", "service", "model_name", "model_params", "deep_research_id", "created_at", "updated_at"]
+    deep_research_id: Optional[int] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    __properties: ClassVar[List[str]] = ["id", "job_id", "user_id", "owner_user_id", "owner_org_id", "visibility", "status", "service", "model_name", "model_params", "deep_research_id", "created_at", "updated_at"]
 
     @field_validator('status')
     def status_validate_enum(cls, value):
@@ -60,6 +63,20 @@ class ResearchJob(BaseModel):
         if value not in ('private', 'public', 'org'):
             raise ValueError("must be one of enum values ('private', 'public', 'org')")
         return value
+    
+    @model_validator(mode='before')
+    @classmethod
+    def validate_datetimes(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, datetime):
+                    data[key] = value.isoformat()
+        else:
+            if hasattr(data, 'created_at') and isinstance(data.created_at, datetime):
+                data.created_at = data.created_at.isoformat()
+            if hasattr(data, 'updated_at') and isinstance(data.updated_at, datetime):
+                data.updated_at = data.updated_at.isoformat()
+        return data
 
     model_config = {
         "populate_by_name": True,
@@ -111,6 +128,7 @@ class ResearchJob(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
+            "id": obj.get("id"),
             "job_id": obj.get("job_id"),
             "user_id": obj.get("user_id"),
             "owner_user_id": obj.get("owner_user_id"),

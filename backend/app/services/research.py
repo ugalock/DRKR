@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from cachetools import TTLCache
 
 import httpx
 from fastapi import HTTPException
@@ -17,6 +18,8 @@ from app.models import AiModel as AiModelDB
 from app.schemas.research_job import ResearchJob as ResearchJobSchema
 from app.schemas.research_job_create_request import ResearchJobCreateRequest
 
+cache = TTLCache(maxsize=100, ttl=300)
+
 class ResearchService:
     def __init__(self):
         # No database or cache initialization here
@@ -24,15 +27,21 @@ class ResearchService:
 
     async def _get_service_config(self, db: AsyncSession, service: str) -> Dict:
         """Get the configuration for a research service"""
+        if service in cache:
+            return cache[service]
+        
         # Query the service and model info from the database
         stmt = (
             select(ResearchServiceDB)
             .options(
-                joinedload(ResearchServiceDB.models).joinedload(AiModelDB.service_models)
+                selectinload(ResearchServiceDB.default_model),
+                selectinload(ResearchServiceDB.service_models).selectinload(ResearchServiceModel.model),
+                selectinload(ResearchServiceDB.models)
             )
             .where(ResearchServiceDB.service_key == service)
         )
-        db_service = await db.execute(stmt).unique().scalar_one_or_none()
+        db_service = await db.execute(stmt)
+        db_service = db_service.scalar_one_or_none()
         
         if not db_service:
             raise HTTPException(
@@ -45,23 +54,18 @@ class ResearchService:
         service_config = {
             "url": repl_regex.sub(lambda match: getattr(settings, match.group(1), match.group(0)), db_service.url),
             "default_model": None,
-            "default_params": {}
+            "default_params": {},
+            "models": {}
         }
 
         # Find the default model
-        default_model = None
-        if db_service.default_model_id:
-            default_model = next(
-                (model for model in db_service.models 
-                 if model.id == db_service.default_model_id),
-                None
-            )
+        default_model = db_service.default_model
         
         if not default_model and db_service.models:
             # If no explicit default, try to find one marked as default in the linking table
             default_model = next(
                 (model for model in db_service.models 
-                 if any(sm.is_default for sm in model.service_models 
+                 if model.is_active and any(sm.is_default for sm in model.service_models 
                        if sm.service_id == db_service.id)),
                 db_service.models[0]  # Fallback to first model if no default specified
             )
@@ -70,6 +74,15 @@ class ResearchService:
             service_config["default_model"] = default_model.model_key
             service_config["default_params"] = default_model.default_params
 
+        if db_service.models:
+            for model in db_service.models:
+                if model.is_active:
+                    service_config["models"][model.model_key] = {
+                        "default_params": model.default_params,
+                        "max_tokens": model.max_tokens
+                    }
+
+        cache[service] = service_config
         return service_config
 
     async def _validate_service(self, db: AsyncSession, service: str) -> None:
@@ -106,9 +119,19 @@ class ResearchService:
             # Use default model if none specified
             if not model:
                 model = service_config["default_model"]
+                default_params = service_config["default_params"]
+                max_tokens = service_config["max_tokens"]
+            elif model not in service_config["models"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported model: {model}"
+                )
+            else:
+                default_params = service_config["models"][model]["default_params"]
+                max_tokens = service_config["models"][model]["max_tokens"]
             
             # Merge default and custom model params
-            params = service_config["default_params"].copy()
+            params = default_params.copy()
             if model_params:
                 params.update(model_params)
             if model.startswith("o") and "reasoning_effort" not in params:
@@ -139,15 +162,16 @@ class ResearchService:
                 # Create and save research job
                 db_job = ResearchJob(
                     job_id=job_id,
-                    user_id=user_id,
+                    user_id=int(user_id),
                     status=result.get("status", "pending_answers"),
                     service=service,
+                    prompt=prompt,
                     model_name=model,
                     model_params=params,
                     visibility="private"  # Default to private
                 )
                 
-                await db.add(db_job)
+                db.add(db_job)
                 await db.commit()
                 await db.refresh(db_job)
                 
@@ -375,23 +399,14 @@ class ResearchService:
         db: AsyncSession,
         service_key: Optional[str] = None
     ) -> List[ResearchServiceDB]:
-        """
-        Get all research services or a specific one by service_key.
-        
-        Args:
-            db: Database session
-            service_key: Optional service key to filter by
-            
-        Returns:
-            List of research services or a single service wrapped in a list
-        """
+        """Get all research services or a specific one by service_key."""
         query = select(ResearchServiceDB)
         
-        # query = query.options(
-        #     # Load the relationships we need
-        #     selectinload(ResearchServiceDB.default_model),
-        #     selectinload(ResearchServiceDB.service_models).selectinload(ResearchServiceModel.model)
-        # )
+        # Explicitly load all relationships needed by the Pydantic schema
+        query = query.options(
+            selectinload(ResearchServiceDB.default_model),
+            selectinload(ResearchServiceDB.service_models).selectinload(ResearchServiceModel.model)
+        )
         
         if service_key:
             query = query.where(ResearchServiceDB.service_key == service_key)

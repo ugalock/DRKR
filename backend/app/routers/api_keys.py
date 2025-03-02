@@ -45,7 +45,7 @@ async def create_api_key(
         expires_at=expires_at
     )
     
-    await db.add(db_api_key)
+    db.add(db_api_key)
     await db.commit()
     await db.refresh(db_api_key)
     

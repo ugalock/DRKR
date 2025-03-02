@@ -31,8 +31,8 @@ class OrganizationMember(BaseModel):
     organization_id: Optional[StrictInt] = None
     user_id: Optional[StrictInt] = None
     role: Optional[StrictStr] = None
-    created_at: Optional[StrictStr] = None
-    updated_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     __properties: ClassVar[List[str]] = ["id", "organization_id", "user_id", "role", "created_at", "updated_at"]
 
     model_config = {

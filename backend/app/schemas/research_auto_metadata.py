@@ -18,7 +18,7 @@ class ResearchAutoMetadata(BaseModel):
     meta_key: StrictStr
     meta_value: StrictStr
     confidence_score: Optional[StrictInt] = None
-    created_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
     __properties: ClassVar[List[str]] = ["id", "deep_research_id", "meta_key", "meta_value", "confidence_score", "created_at"]
 
     model_config = {

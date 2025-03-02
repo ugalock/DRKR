@@ -46,8 +46,8 @@ class DeepResearch(BaseModel):
     model_name: Optional[StrictStr] = None
     model_params: Optional[Dict[str, Any]] = None
     source_count: Optional[StrictInt] = None
-    created_at: Optional[StrictStr] = None
-    updated_at: Optional[StrictStr] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     chunks: Optional[List[ResearchChunk]] = None
     summaries: Optional[List[ResearchSummary]] = None
     sources: Optional[List[ResearchSource]] = None
