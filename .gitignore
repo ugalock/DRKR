@@ -16,6 +16,7 @@ build/
 pip-log.txt
 pip-delete-this-directory.txt
 migrations/
+supervisord.conf
 
 # Virtual Environment
 venv/

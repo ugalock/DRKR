@@ -8,17 +8,35 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from cachetools import TTLCache
+from urllib.parse import urlparse
+
 
 import httpx
 from fastapi import HTTPException
+import openai
 
 from app.config import settings
-from app.models import ResearchJob, ResearchService as ResearchServiceDB, ResearchServiceModel
-from app.models import AiModel as AiModelDB
+from app.models import ResearchJob, ResearchService as ResearchServiceDB, ResearchServiceModel, DeepResearch, ResearchSource
 from app.schemas.research_job import ResearchJob as ResearchJobSchema
 from app.schemas.research_job_create_request import ResearchJobCreateRequest
+from app.tasks.research_processing import process_research_data
+
 
 cache = TTLCache(maxsize=100, ttl=300)
+openai_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+
+def get_deep_research_title(prompt_text: str) -> str:
+    prompt = f"Generate a title for the following research prompt using no more than 255 characters: {prompt_text}"
+    response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that generates a title for a research report based on a prompt."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+        max_tokens=75
+    )
+    return response.choices[0].message.content
 
 class ResearchService:
     def __init__(self):
@@ -139,7 +157,7 @@ class ResearchService:
 
             # Make API request
             async with httpx.AsyncClient() as client:
-                response = await client.post(url + "/research/start", json={
+                response = await client.post(url + "/research/start", timeout=httpx.Timeout(10.0), json={
                     "user_id": user_id,
                     "prompt": prompt,
                     "breadth": breadth,
@@ -184,7 +202,7 @@ class ResearchService:
         self,
         db: AsyncSession,
         service: str,
-        user_id: str,
+        user_id: int,
         job_id: str,
         answers: List[str]
     ) -> Dict:
@@ -197,7 +215,8 @@ class ResearchService:
             ResearchJob.user_id == user_id,
             ResearchJob.service == service
         )
-        db_job = await db.execute(stmt).scalar_one_or_none()
+        db_job = await db.execute(stmt)
+        db_job = db_job.scalar_one_or_none()
         
         if not db_job:
             raise HTTPException(
@@ -211,7 +230,7 @@ class ResearchService:
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(url + "/research/answer", json={
-                    "user_id": user_id,
+                    "user_id": str(user_id),
                     "job_id": job_id,
                     "answers": answers
                 })
@@ -234,7 +253,7 @@ class ResearchService:
     async def poll_status(
         self,
         db: AsyncSession,
-        user_id: str,
+        user_id: int,
         id: Optional[int] = None,
         job_id: Optional[str] = None,
         service: Optional[str] = None
@@ -269,7 +288,7 @@ class ResearchService:
             )
         
         # Return immediately if job is in a final state
-        if db_job.status in ["complete", "failed", "cancelled"]:
+        if db_job.status in ["completed", "failed", "cancelled"]:
             return {
                 "job": ResearchJobSchema.model_validate(db_job),
                 "results": None  # No need to fetch results if already complete
@@ -286,7 +305,7 @@ class ResearchService:
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(url + "/research/status", params={
-                    "user_id": user_id,
+                    "user_id": str(user_id),
                     "job_id": job_id
                 })
                 
@@ -297,13 +316,77 @@ class ResearchService:
                     )
                 
                 result = response.json()
-                
-                # Update job status
-                db_job.status = result["status"]
-                if result["status"] == "complete" and "results" in result:
-                    # TODO: Store research results in DeepResearch table
-                    pass
-                
+                if result["status"] == "complete":
+                    db_job.status = "completed"
+                else:
+                    # Update job status
+                    db_job.status = result["status"]
+                if db_job.status == "completed" and "results" in result:
+                    # Store research results in DeepResearch table
+                    research_results = result.get("results", {})
+                    prompt_text = research_results.get("prompt", "")
+                    questions_and_answers = research_results.get("questions_and_answers", "")
+                    final_report = research_results.get("report", "")
+                    sources = research_results.get("sources", [])
+                    
+                    # Create a title from prompt (truncate if needed)
+                    try:
+                        title = get_deep_research_title(prompt_text)
+                    except:
+                        title = prompt_text[:255] if len(prompt_text) <= 255 else prompt_text[:252] + "..."
+                    
+                    # Create DeepResearch record
+                    deep_research = DeepResearch(
+                        user_id=user_id,
+                        owner_user_id=user_id,  # User who created the job is the owner
+                        owner_org_id=db_job.owner_org_id,  # Copy organization ownership from job
+                        visibility=db_job.visibility,  # Use same visibility setting as job
+                        title=title,
+                        prompt_text=prompt_text,
+                        questions_and_answers=questions_and_answers,
+                        final_report=final_report,
+                        model_name=db_job.model_name,
+                        model_params=db_job.model_params,
+                        source_count=len(sources)
+                        # Vector embeddings will be added by the async processor
+                    )
+                    
+                    db.add(deep_research)
+                    await db.flush()  # Get ID without committing transaction
+                    
+                    # Add sources if available
+                    for source in sources:
+                        source_url = source.get("url", "")
+                        source_title = source.get("title", "")
+                        source_excerpt = source.get("description", "")
+                        
+                        # Extract domain from URL
+                        domain = None
+                        if source_url:
+                            try:
+                                parsed_url = urlparse(source_url)
+                                domain = parsed_url.netloc
+                            except:
+                                # If URL parsing fails, leave domain as None
+                                pass
+                        
+                        # Create source record
+                        db_source = ResearchSource(
+                            deep_research_id=deep_research.id,
+                            source_url=source_url,
+                            source_title=source_title,
+                            source_excerpt=source_excerpt,
+                            domain=domain,
+                            source_type="website"  # Default, can be refined later
+                        )
+                        db.add(db_source)
+                    
+                    # Link the job to the research
+                    db_job.deep_research_id = deep_research.id
+                    await db.commit()
+                    # Trigger async processing tasks
+                    process_research_data.delay(deep_research.id)
+
                 await db.commit()
                 await db.refresh(db_job)
                 

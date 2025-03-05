@@ -18,8 +18,6 @@ from pgvector.sqlalchemy import Vector as VECTOR
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func as sql_func
-import datetime
-
 from app.db.database import Base
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 
@@ -74,6 +72,7 @@ class OrganizationMember(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role = Column(String(50), nullable=False, default="member")
     created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
 
     __table_args__ = (
         UniqueConstraint("organization_id", "user_id", name="uq_org_user"),
@@ -82,11 +81,24 @@ class OrganizationMember(Base):
     organization = relationship("Organization", back_populates="members")
     user = relationship("User", back_populates="organization_memberships")
 
-# 4) api_keys
+# 4) api_services
+class ApiService(Base):
+    __tablename__ = "api_services"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    
+    # Relationship
+    api_keys = relationship("ApiKey", back_populates="api_service")
+
+# 5) api_keys
 class ApiKey(Base):
     __tablename__ = "api_keys"
 
     id = Column(Integer, primary_key=True)
+    api_service_id = Column(Integer, ForeignKey("api_services.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"))
@@ -106,11 +118,12 @@ class ApiKey(Base):
     # Changed backref to back_populates
     user = relationship("User", back_populates="api_keys")
     organization = relationship("Organization", back_populates="api_keys")
+    api_service = relationship("ApiService", back_populates="api_keys")
 
 # We'll define a Python Enum for 'visibility' to match your Postgres enum.
 VisibilityEnum = PGEnum("private", "public", "org", name="visibility", create_type=False)
 
-# 5) deep_research
+# 6) deep_research
 class DeepResearch(Base):
     __tablename__ = "deep_research"
 
@@ -122,6 +135,7 @@ class DeepResearch(Base):
 
     title = Column(String(255), nullable=False)
     prompt_text = Column(Text, nullable=False)
+    questions_and_answers = Column(Text)
     final_report = Column(Text, nullable=False)
     model_name = Column(String(100))
     model_params = Column(JSONB)
@@ -144,9 +158,9 @@ class DeepResearch(Base):
     ratings = relationship("ResearchRating", back_populates="deep_research")
     comments = relationship("ResearchComment", back_populates="deep_research")
     auto_metadata = relationship("ResearchAutoMetadata", back_populates="deep_research")
-    research_job = relationship("ResearchJob", back_populates="deep_research", foreign_keys="ResearchJob.deep_research_id")
+    research_job = relationship("ResearchJob", back_populates="deep_research", uselist=False)
 
-# 6) research_chunks
+# 7) research_chunks
 class ResearchChunk(Base):
     __tablename__ = "research_chunks"
 
@@ -160,7 +174,7 @@ class ResearchChunk(Base):
 
     deep_research = relationship("DeepResearch", back_populates="chunks")
 
-# 7) research_summaries
+# 8) research_summaries
 class ResearchSummary(Base):
     __tablename__ = "research_summaries"
 
@@ -173,7 +187,7 @@ class ResearchSummary(Base):
 
     deep_research = relationship("DeepResearch", back_populates="summaries")
 
-# 8) research_sources
+# 9) research_sources
 class ResearchSource(Base):
     __tablename__ = "research_sources"
 
@@ -188,7 +202,7 @@ class ResearchSource(Base):
 
     deep_research = relationship("DeepResearch", back_populates="sources")
 
-# 9) domain_co_occurrences
+# 10) domain_co_occurrences
 class DomainCoOccurrence(Base):
     __tablename__ = "domain_co_occurrences"
 
@@ -202,7 +216,7 @@ class DomainCoOccurrence(Base):
         UniqueConstraint("domain_a", "domain_b", name="uq_domain_a_b"),
     )
 
-# 10) tags
+# 11) tags
 class Tag(Base):
     __tablename__ = "tags"
 
@@ -250,14 +264,14 @@ class Tag(Base):
           unique=True,
           postgresql_where="user_id IS NOT NULL")
 
-# 11) deep_research_tags (join table)
+# 12) deep_research_tags (join table)
 class DeepResearchTag(Base):
     __tablename__ = "deep_research_tags"
 
     deep_research_id = Column(Integer, ForeignKey("deep_research.id", ondelete="CASCADE"), primary_key=True)
     tag_id = Column(Integer, ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
 
-# 12) research_ratings
+# 13) research_ratings
 class ResearchRating(Base):
     __tablename__ = "research_ratings"
 
@@ -274,7 +288,7 @@ class ResearchRating(Base):
     deep_research = relationship("DeepResearch", back_populates="ratings")
     user = relationship("User", back_populates="research_ratings")
 
-# 13) research_comments
+# 14) research_comments
 class ResearchComment(Base):
     __tablename__ = "research_comments"
 
@@ -289,7 +303,7 @@ class ResearchComment(Base):
     deep_research = relationship("DeepResearch", back_populates="comments")
     user = relationship("User", back_populates="comments")
 
-# 14) research_auto_metadata
+# 15) research_auto_metadata
 class ResearchAutoMetadata(Base):
     __tablename__ = "research_auto_metadata"
 
@@ -302,7 +316,7 @@ class ResearchAutoMetadata(Base):
 
     deep_research = relationship("DeepResearch", back_populates="auto_metadata")
 
-# 15) research_jobs
+# 16) research_jobs
 class ResearchJob(Base):
     __tablename__ = "research_jobs"
 
@@ -330,10 +344,10 @@ class ResearchJob(Base):
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="research_jobs")
-    deep_research = relationship("DeepResearch", foreign_keys=[deep_research_id], back_populates="research_job")
+    deep_research = relationship("DeepResearch", foreign_keys=[deep_research_id], back_populates="research_job", uselist=False)
     organization = relationship("Organization", foreign_keys=[owner_org_id], back_populates="research_jobs")
 
-# 16) research_services
+# 17) research_services
 class ResearchService(Base):
     """
     Model for research services like "open-dr"
@@ -355,7 +369,7 @@ class ResearchService(Base):
     models = relationship("AiModel", secondary="research_service_models", back_populates="services")
     service_models = relationship("ResearchServiceModel", back_populates="service", overlaps="models")
 
-# 17) ai_models
+# 18) ai_models
 class AiModel(Base):
     """
     Model for AI models with their specifications
@@ -379,7 +393,7 @@ class AiModel(Base):
                                  overlaps="models,services")
 
 
-# 18) research_service_models
+# 19) research_service_models
 class ResearchServiceModel(Base):
     """
     Linking table between Research Services and AI Models

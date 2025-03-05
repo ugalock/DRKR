@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import type { DeepResearch } from '../../types/deep_research';
-import type { Tag } from '../../types/tags';
+import type { Tag } from '../../types/tag';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { Typography } from '@mui/material';

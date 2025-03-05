@@ -19,6 +19,7 @@ from fastapi import (  # noqa: F401
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select, or_, union_all, and_
+from sqlalchemy.orm import selectinload
 from pydantic import StrictInt
 from typing import Any, List
 
@@ -274,6 +275,15 @@ async def tags_id_research_get(
                     DeepResearch.owner_org_id.in_([m.organization_id for m in current_user.organization_memberships])
                 )
             )
+        )
+        .options(
+            selectinload(DeepResearch.research_job),
+            selectinload(DeepResearch.sources),
+            selectinload(DeepResearch.auto_metadata),
+            selectinload(DeepResearch.comments),
+            selectinload(DeepResearch.ratings),
+            selectinload(DeepResearch.chunks),
+            selectinload(DeepResearch.summaries),
         )
         .order_by(DeepResearch.created_at.desc())
     )

@@ -124,7 +124,7 @@ async def research_jobs_get(
     """Get research job status."""
     result = await research_service.poll_status(
         db=db,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         id=request.id if hasattr(request, 'id') else None,
         job_id=request.job_id if hasattr(request, 'job_id') else None,
         service=request.service if hasattr(request, 'service') else None
@@ -243,7 +243,7 @@ async def research_jobs_answer(
     return await research_service.answer_questions(
         db=db,
         service=request.service,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         job_id=request.job_id,
         answers=request.answers
     )

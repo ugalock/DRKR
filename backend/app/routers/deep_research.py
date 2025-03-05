@@ -23,6 +23,7 @@ from fastapi import (  # noqa: F401
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, or_, and_, select
+from sqlalchemy.orm import selectinload
 from app.db import get_db
 from app.models import DeepResearch as DeepResearchModel
 from app.schemas.extra_models import TokenModel  # noqa: F401
@@ -31,6 +32,8 @@ from typing import Any, List
 from app.schemas.deep_research import DeepResearch
 from app.schemas.deep_research_create_request import DeepResearchCreateRequest
 from app.schemas.deep_research_update_request import DeepResearchUpdateRequest
+from app.schemas.tag import Tag
+from app.models import Tag as TagModel, DeepResearchTag
 from app.services.authentication import get_current_user
 from datetime import datetime
 
@@ -39,6 +42,22 @@ router = APIRouter()
 ns_pkg = app.impl
 for _, name, _ in pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + "."):
     importlib.import_module(name)
+
+
+def get_deep_research_options():
+    """
+    Returns SQLAlchemy options to load all DeepResearch relationships.
+    Used to consistently load relationships across all endpoints.
+    """
+    return [
+        selectinload(DeepResearchModel.chunks),
+        selectinload(DeepResearchModel.summaries),
+        selectinload(DeepResearchModel.sources),
+        selectinload(DeepResearchModel.auto_metadata),
+        selectinload(DeepResearchModel.comments),
+        selectinload(DeepResearchModel.ratings),
+        selectinload(DeepResearchModel.research_job),
+    ]
 
 
 @router.get(
@@ -74,16 +93,16 @@ async def research_get(
         )
     )
     
-    # Apply pagination
-    query = query.order_by(DeepResearchModel.created_at.desc()) \
+    # Apply pagination and load relationships
+    query = query.options(*get_deep_research_options()) \
+                .order_by(DeepResearchModel.created_at.desc()) \
                 .offset(offset) \
                 .limit(limit)
     
     # Execute query
     result = await db.execute(query)
     items = result.scalars().all()
-    
-    return [DeepResearch.model_validate(item) for item in items]
+    return [DeepResearch.model_validate(item, strict=False) for item in items]
 
 
 @router.delete(
@@ -137,8 +156,8 @@ async def research_id_get(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ) -> DeepResearch:
-    # Lookup the research item
-    stmt = select(DeepResearchModel).where(DeepResearchModel.id == id)
+    # Lookup the research item with all relationships loaded
+    stmt = select(DeepResearchModel).where(DeepResearchModel.id == id).options(*get_deep_research_options())
     result = await db.execute(stmt)
     research = result.scalars().first()
     
@@ -204,7 +223,8 @@ async def research_id_patch(
     
     # Save changes
     await db.commit()
-    await db.refresh(research)
+    # Refresh the object with relationships loaded
+    await db.refresh(research, options=get_deep_research_options())
     
     return DeepResearch.model_validate(research)
 
@@ -258,6 +278,52 @@ async def research_post(
     # Save to database
     db.add(research)
     await db.commit()
-    await db.refresh(research)
+    # Refresh the object with relationships loaded
+    await db.refresh(research, options=get_deep_research_options())
     
     return DeepResearch.model_validate(research)
+
+@router.get(
+    "/deep-research/{id}/tags",
+    responses={
+        200: {"model": List[Tag], "description": "Tags associated with the deep research item"},
+    },
+    tags=["deep-research"],
+    summary="Get tags for a deep research item",
+    response_model_by_alias=True,
+)
+async def research_id_tags_get(
+    id: StrictInt = Path(..., description=""),
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+) -> List[Tag]:
+    # Lookup the research item first
+    stmt = select(DeepResearchModel).where(DeepResearchModel.id == id)
+    result = await db.execute(stmt)
+    research = result.scalars().first()
+    
+    if not research:
+        raise HTTPException(status_code=404, detail="Research item not found")
+    
+    # Check access permissions (same logic as in research_id_get)
+    if research.visibility != "public":
+        if research.visibility == "private" and research.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        elif research.visibility == "org":
+            org_member = next((m for m in current_user.organization_memberships 
+                             if m.organization_id == research.owner_org_id), None)
+            if not org_member:
+                raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Query tags associated with this research item
+    query = select(TagModel).join(
+        DeepResearchTag, 
+        TagModel.id == DeepResearchTag.tag_id
+    ).where(
+        DeepResearchTag.deep_research_id == id
+    )
+    
+    tag_result = await db.execute(query)
+    tags = tag_result.scalars().all()
+    
+    return [Tag.model_validate(tag) for tag in tags]

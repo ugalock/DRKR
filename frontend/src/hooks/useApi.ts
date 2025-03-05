@@ -3,9 +3,11 @@ import axios from 'axios';
 import { useMemo } from 'react';
 
 import { DeepResearch, CreateDeepResearchRequest, UpdateDeepResearchRequest } from '../types/deep_research';
-import { Tag, CreateTagRequest } from '../types/tags';
+import { Tag, CreateTagRequest } from '../types/tag';
 import { User, UpdateUserRequest } from '../types/user';
 import { ResearchService } from '../types/research_service';
+import { Organization, OrgMembershipRequest, OrganizationCreateRequest } from '../types/organization';
+import { ApiKey, ApiKeyCreate } from '../types/api_key';
 import { 
     ResearchJob, 
     ResearchJobCreateRequest, 
@@ -62,6 +64,11 @@ export const useApi = () => {
 
         getResearchById: async (id: string) => {
             const response = await api.get<DeepResearch>(`/api/deep-research/${id}`);
+            return response.data;
+        },
+
+        getResearchTags: async (id: string) => {
+            const response = await api.get<Tag[]>(`/api/deep-research/${id}/tags`);
             return response.data;
         },
 
@@ -146,6 +153,54 @@ export const useApi = () => {
         },
     }
 
+    const apiKeysApi = {
+        getApiKeys: async () => {
+            const response = await api.get<ApiKey[]>('/api/api-keys');
+            return response.data;
+        },
+
+        createApiKey: async (data: ApiKeyCreate, orgId?: number) => {
+            const response = await api.post<ApiKey>('/api/api-keys', data, {
+                params: orgId ? { org_id: orgId } : undefined
+            });
+            return response.data;
+        },
+
+        revokeApiKey: async (keyId: number) => {
+            const response = await api.delete<{ message: string }>(`/api/api-keys/${keyId}`);
+            return response.data;
+        },
+    }
+
+    const organizationsApi = {
+        getOrganizations: async () => {
+            const response = await api.get<Organization[]>('/api/orgs');
+            return response.data;
+        },
+
+        getOrganization: async (id: number) => {
+            const response = await api.get<Organization>(`/api/orgs/${id}`);
+            return response.data;
+        },
+
+        createOrganization: async (data: OrganizationCreateRequest) => {
+            const response = await api.post<Organization>('/api/orgs', data);
+            return response.data;
+        },
+
+        addMember: async (orgId: number, data: OrgMembershipRequest) => {
+            const response = await api.post<void>(`/api/orgs/${orgId}/members`, data);
+            return response.data;
+        },
+
+        removeMember: async (orgId: number, userId: number) => {
+            const response = await api.delete<void>(`/api/orgs/${orgId}/members`, {
+                params: { user_id: userId }
+            });
+            return response.data;
+        },
+    }
+
     return {
         api,
         deepResearchApi,
@@ -153,5 +208,7 @@ export const useApi = () => {
         userApi,
         researchJobsApi,
         researchServicesApi,
+        apiKeysApi,
+        organizationsApi,
     };
 };

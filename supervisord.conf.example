@@ -1,0 +1,15 @@
+[supervisord]
+logfile=/tmp/supervisord.log
+loglevel=info
+pidfile=/tmp/supervisord.pid
+nodaemon=true
+
+[program:redis]
+command=redis-server /path/to/your/redis.conf
+stdout_logfile=/tmp/redis.log
+stderr_logfile=/tmp/redis.err
+
+[program:celery]
+command=celery -A app.tasks.research_processing worker --loglevel=info
+stdout_logfile=/tmp/celery.log
+stderr_logfile=/tmp/celery.err

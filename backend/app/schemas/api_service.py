@@ -11,12 +11,13 @@
     Do not edit the class manually.
 """  # noqa: E501
 
+
 from __future__ import annotations
 import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
+from pydantic import StrictInt, StrictStr, StrictBool
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
@@ -25,27 +26,23 @@ except ImportError:
 
 from app.schemas._base_model import CustomBaseModel
 
-class TagCreateRequest(CustomBaseModel):
+class ApiService(CustomBaseModel):
     """
-    TagCreateRequest
+    ApiService
     """ # noqa: E501
-    name: StrictStr
-    description: Optional[StrictStr] = None
-    is_global: Optional[StrictBool] = None
-    organization_id: Optional[StrictInt] = None
-    user_id: Optional[StrictInt] = None
-    __properties: ClassVar[List[str]] = ["name", "description", "is_global", "organization_id", "user_id"]
+    id: StrictInt = None
+    name: Optional[StrictStr] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    __properties: ClassVar[List[str]] = ["id", "name", "created_at", "updated_at"]
 
     model_config = {
         "populate_by_name": True,
         "validate_assignment": False,
         "protected_namespaces": (),
+        "from_attributes": True,
     }
-
 
     def to_str(self) -> str:
         """Returns the string representation of the model using alias"""
         return pprint.pformat(self.model_dump(by_alias=True))
-
-
-

@@ -1,7 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Dict, Optional
 
-class AiModelBase(BaseModel):
+from app.schemas._base_model import CustomBaseModel
+
+class AiModelBase(CustomBaseModel):
     """Base schema for AI models"""
     model_key: str
     default_params: Dict

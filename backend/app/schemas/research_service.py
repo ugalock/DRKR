@@ -1,7 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
+from app.schemas._base_model import CustomBaseModel
 
-class ResearchServiceBase(BaseModel):
+class ResearchServiceBase(CustomBaseModel):
     """Base schema for research services"""
     service_key: str
     name: str
@@ -19,7 +20,7 @@ class ResearchService(ResearchServiceBase):
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     default_model: Optional["AiModelInResearchService"] = None
-    models: Optional[List["AiModelInResearchService"]] = None
+    # models: Optional[List["AiModelInResearchService"]] = None
     service_models: List["ResearchServiceModel"] = []
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,6 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Optional
-class ResearchServiceModelBase(BaseModel):
+from app.schemas._base_model import CustomBaseModel
+
+class ResearchServiceModelBase(CustomBaseModel):
     """Base schema for research service model relationships"""
     service_id: int
     model_id: int

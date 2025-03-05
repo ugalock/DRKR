@@ -14,6 +14,7 @@ export interface DeepResearch {
     visibility: Visibility;
     title: string;
     prompt_text: string;
+    questions_and_answers?: string | null;
     final_report: string;
     model_name: string | null;
     model_params: string | null;

@@ -11,11 +11,15 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     PINECONE_API_KEY: str
     PINECONE_INDEX_NAME: str
+    PINECONE_HOST_SUFFIX: str
     AUTH0_CLIENT_ID: str
     AUTH0_CLIENT_SECRET: str
     AUTH0_DOMAIN: str
     AUTH0_CALLBACK_URL: str
-    REDIS_URL: Optional[str] = None
+    REDIS_HOST: Optional[str] = "127.0.0.1"
+    REDIS_PORT: Optional[int] = 6379
+    REDIS_PASSWORD: Optional[str] = ""
+    REDIS_DB: Optional[int] = 0
     OPENAI_API_KEY: Optional[str] = None
     API_SCHEME: Optional[str] = "http"
     API_PORT: Optional[int] = 8000

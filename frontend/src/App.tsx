@@ -6,6 +6,7 @@ import { useAuth } from './hooks/useAuth';
 import { HomePage } from './pages/Home';
 import ResearchJobsPage from './pages/Research/jobs';
 import CreateResearchJobPage from './pages/Research/create';
+import { ResearchDetailPage } from './pages/Research/detail';
 import Footer from './components/common/Footer';
 
 // Create a separate component for the authenticated routes to use useNavigate
@@ -50,6 +51,7 @@ const AuthenticatedApp = () => {
         <Route path="/home" element={<HomePage />} />
         <Route path="/research/jobs" element={<ResearchJobsPage />} />
         <Route path="/research/create-job" element={<CreateResearchJobPage />} />
+        <Route path="/research/:id" element={<ResearchDetailPage />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
       <Footer />

@@ -163,14 +163,13 @@ const ResearchJobsPage: React.FC = () => {
   const { researchJobsApi } = useApi();
   const [jobs, setJobs] = useState<ResearchJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [orderBy, setOrderBy] = useState<keyof ResearchJob>('created_at');
   const [order, setOrder] = useState<Order>('desc');
   const [filters, setFilters] = useState<Partial<Record<keyof ResearchJob, string>>>({});
   const isFetchingRef = useRef(false);
   
-  // Memoize the fetchJobs function to avoid recreation on each render
   const fetchJobs = async () => {
     // Skip if already fetching
     if (isFetchingRef.current) return;
@@ -180,7 +179,7 @@ const ResearchJobsPage: React.FC = () => {
       setLoading(true);
       
       const response = await researchJobsApi.getResearchJobs({
-        page: page,
+        page: page + 1,
         limit: rowsPerPage,
       });
       setJobs(response);
@@ -208,7 +207,7 @@ const ResearchJobsPage: React.FC = () => {
 
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(1);
+    setPage(0);
   };
 
   const handleFilterChange = (column: keyof ResearchJob) => (
@@ -266,10 +265,7 @@ const ResearchJobsPage: React.FC = () => {
     return order === 'desc' ? -comparison : comparison;
   });
 
-  const paginatedJobs = sortedJobs.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  const paginatedJobs = sortedJobs;
 
   // Custom filter component for visibility
   const VisibilityFilter: React.FC<{
@@ -335,7 +331,7 @@ const ResearchJobsPage: React.FC = () => {
                         value={filters[column.id] || ''}
                         onChange={(value) => {
                           setFilters({ ...filters, [column.id]: value });
-                          setPage(1);
+                          setPage(0);
                         }}
                       />
                     ) : column.filterable ? (

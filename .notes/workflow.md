@@ -38,19 +38,19 @@ This section outlines the step-by-step plan for building out the DRKR project, m
   [✔] ...
 
 ## 5. Services (Business Logic)
-[ ] **Research Service (`services/research.py`):**  
-  [ ] Orchestrate the deep research workflow: fetching prompt data, interfacing with LLMs, chunking texts, and storing results.
-[ ] **Pinecone Integration (`services/pinecone_service.py`):**  
-  [ ] Handle embedding generation and interactions with the Pinecone vector database.
+[✔] **Research Service (`services/research.py`):**  
+  [✔] Orchestrate the deep research workflow: fetching prompt data, interfacing with LLMs, chunking texts, and storing results.
+[✔] **Pinecone Integration (`services/pinecone_service.py`):**  
+  [✔] Handle embedding generation and interactions with the Pinecone vector database.
 [✔] **Authentication Utilities (`services/authentication.py`):**  
   [✔] Consolidate logic for JWT handling and OAuth2 integrations.
 
 ## 6. Celery Integration
-[ ] **Celery Configuration:**  
-  [ ] Set up Celery in `backend/app/core/celery_app.py` with Redis as the broker.
-[ ] **Defining Tasks:**  
-  [ ] In a dedicated file (or within `services/research.py`), define Celery tasks (e.g., a task to execute a deep research job).
-  [ ] Use `run_deep_research.delay(prompt_id)` in the relevant endpoint to trigger asynchronous processing.
+[✔] **Celery Configuration:**  
+  [✔] Set up Celery in `backend/app/core/celery_app.py` with Redis as the broker.
+[✔] **Defining Tasks:**  
+  [✔] In a dedicated file (or within `services/research.py`), define Celery tasks (e.g., a task to execute a deep research job).
+  [✔] Use `run_deep_research.delay(prompt_id)` in the relevant endpoint to trigger asynchronous processing.
 
 ## 7. Logging & Error Handling
 [ ] **Structured Logging:**  
