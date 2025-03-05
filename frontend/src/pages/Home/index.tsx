@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import type { DeepResearch } from '../../types/deep_research';
 import type { Tag } from '../../types/tag';
+import Header from '../../components/common/Header';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
-import { Typography } from '@mui/material';
 
 export const HomePage: React.FC = () => {
   const api = useApi();
@@ -25,9 +25,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-        <Typography variant="h4">DRKR</Typography>
-      </header>
+      <Header subtitle="Home" />
 
       <NavBar />
 

@@ -16,17 +16,16 @@ import {
   TablePagination,
   TableSortLabel,
   TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import VisibilityFilter from '../../components/VisibilityFilter';
+import Header from '../../components/common/Header';
 import Footer from '../../components/common/Footer';
 import NavBar from '../../components/common/NavBar';
 import { ResearchJob } from '../../types/research_job';
+import { Organization } from '../../types/organization';
 import { useApi } from '../../hooks/useApi';
 
 type Order = 'asc' | 'desc';
@@ -41,7 +40,7 @@ interface Column {
 const columns: Column[] = [
   { id: 'service', label: 'Service', sortable: true, filterable: true },
   { id: 'model_name', label: 'Model', sortable: true, filterable: true },
-  { id: 'visibility', label: 'Visibility', sortable: true, filterable: true },
+  { id: 'visibility', label: 'Visibility', sortable: false, filterable: true },
   { id: 'status', label: 'Status', sortable: true, filterable: true },
   { id: 'created_at', label: 'Created', sortable: true, filterable: false },
   { id: 'updated_at', label: 'Last Updated', sortable: true, filterable: false },
@@ -160,14 +159,16 @@ const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
 
 const ResearchJobsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { researchJobsApi } = useApi();
+  const { researchJobsApi, organizationsApi } = useApi();
   const [jobs, setJobs] = useState<ResearchJob[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [orderBy, setOrderBy] = useState<keyof ResearchJob>('created_at');
   const [order, setOrder] = useState<Order>('desc');
   const [filters, setFilters] = useState<Partial<Record<keyof ResearchJob, string>>>({});
+  const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(undefined);
   const isFetchingRef = useRef(false);
   
   const fetchJobs = async () => {
@@ -181,6 +182,8 @@ const ResearchJobsPage: React.FC = () => {
       const response = await researchJobsApi.getResearchJobs({
         page: page + 1,
         limit: rowsPerPage,
+        visibility: filters.visibility as string,
+        org_id: selectedOrgId,
       });
       setJobs(response);
     } catch (error) {
@@ -193,7 +196,19 @@ const ResearchJobsPage: React.FC = () => {
 
   useEffect(() => {
     fetchJobs();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, filters.visibility, selectedOrgId]);
+
+  useEffect(() => {
+    const loadOrgs = async () => {
+      try {
+        const orgs = await organizationsApi.getOrganizations();
+        setOrganizations(orgs);
+      } catch (error) {
+        console.error('Error loading organizations:', error);
+      }
+    };
+    loadOrgs();
+  }, []);
 
   const handleSort = (property: keyof ResearchJob) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -267,37 +282,13 @@ const ResearchJobsPage: React.FC = () => {
 
   const paginatedJobs = sortedJobs;
 
-  // Custom filter component for visibility
-  const VisibilityFilter: React.FC<{
-    value: string;
-    onChange: (value: string) => void;
-  }> = ({ value, onChange }) => (
-    <FormControl size="small" sx={{ mt: 1, minWidth: 120 }}>
-      <InputLabel id="visibility-filter-label">Visibility</InputLabel>
-      <Select
-        labelId="visibility-filter-label"
-        value={value}
-        label="Visibility"
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <MenuItem value="">All</MenuItem>
-        <MenuItem value="private">Private</MenuItem>
-        <MenuItem value="public">Public</MenuItem>
-        <MenuItem value="org">Organization</MenuItem>
-      </Select>
-    </FormControl>
-  );
-
   if (loading) {
     return <div>Loading...</div>;
   }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-        <Typography variant="h4">DRKR</Typography>
-        <Typography variant="h6">Research Jobs</Typography>
-      </header>
+      <Header subtitle="Research Jobs" />
 
       <NavBar />
 
@@ -319,18 +310,38 @@ const ResearchJobsPage: React.FC = () => {
                 <TableCell /> {/* Expansion column */}
                 {columns.map((column) => (
                   <TableCell key={column.id}>
-                    <TableSortLabel
-                      active={orderBy === column.id}
-                      direction={orderBy === column.id ? order : 'asc'}
-                      onClick={() => column.sortable && handleSort(column.id)}
-                    >
-                      {column.label}
-                    </TableSortLabel>
+                    {column.sortable ? (
+                      <TableSortLabel
+                        active={orderBy === column.id}
+                        direction={orderBy === column.id ? order : 'asc'}
+                        onClick={() => handleSort(column.id)}
+                      >
+                        {column.label}
+                      </TableSortLabel>
+                    ) : (
+                      <Typography
+                        variant="inherit"
+                        display="block"
+                        style={{ fontWeight: 'inherit', padding: '4px 0' }}
+                      >
+                        {column.label}
+                      </Typography>
+                    )}
                     {column.filterable && column.id === 'visibility' ? (
                       <VisibilityFilter
-                        value={filters[column.id] || ''}
-                        onChange={(value) => {
-                          setFilters({ ...filters, [column.id]: value });
+                        value={filters[column.id] as string || ''}
+                        organizations={organizations}
+                        selectedOrgId={selectedOrgId}
+                        onChange={(value, orgId) => {
+                          setFilters(prev => ({
+                            ...prev,
+                            [column.id]: value
+                          }));
+                          if (value !== 'org') {
+                            setSelectedOrgId(undefined);
+                          } else {
+                            setSelectedOrgId(orgId);
+                          }
                           setPage(0);
                         }}
                       />

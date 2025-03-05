@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from fastapi import HTTPException, Security, Depends
 from fastapi.security import OAuth2AuthorizationCodeBearer, APIKeyHeader
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import httpx
@@ -121,17 +122,13 @@ async def get_current_user(
         sub: str = payload.get("sub")
         auth_provider, external_id = sub.split("|")
     except HTTPException:
-        import traceback
-        traceback.print_exc()
         raise
     except:
-        import traceback
-        traceback.print_exc()
         raise credentials_exception
     if external_id is None:
         raise credentials_exception
         
-    query = select(User).where(User.external_id == external_id)
+    query = select(User).where(User.external_id == external_id).options(selectinload(User.organization_memberships))
     user = await db.execute(query)
     user = user.scalar_one_or_none()
     if user is None:

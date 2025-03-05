@@ -26,6 +26,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { encoding_for_model, type TiktokenModel, type Tiktoken } from 'tiktoken';
 import debounce from 'lodash/debounce';
 
+import Header from '../../components/common/Header';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { useApi } from '../../hooks/useApi';
@@ -433,10 +434,7 @@ const CreateResearchJobPage: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-        <Typography variant="h4">DRKR</Typography>
-        <Typography variant="h6">Create Research Job</Typography>
-      </header>
+      <Header subtitle="Create Research Job" />
 
       <NavBar />
 

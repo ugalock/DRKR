@@ -27,6 +27,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import LinkIcon from '@mui/icons-material/Link';
+import Header from '../../components/common/Header';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { useApi } from '../../hooks/useApi';
@@ -218,9 +219,7 @@ const ResearchDetail: React.FC = () => {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-          <Typography variant="h5">Research Details</Typography>
-        </header>
+        <Header subtitle="Research Details" />
         <NavBar />
         <Container component="main" sx={{ flexGrow: 1, py: 4, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <CircularProgress />
@@ -233,9 +232,7 @@ const ResearchDetail: React.FC = () => {
   if (error) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-          <Typography variant="h5">Research Details</Typography>
-        </header>
+        <Header subtitle="Research Details" />
         <NavBar />
         <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
           <Alert severity="error">
@@ -251,9 +248,7 @@ const ResearchDetail: React.FC = () => {
   if (!research) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-          <Typography variant="h5">Research Details</Typography>
-        </header>
+        <Header subtitle="Research Details" />
         <NavBar />
         <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
           <Alert severity="warning">

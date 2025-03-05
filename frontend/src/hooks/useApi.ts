@@ -120,6 +120,7 @@ export const useApi = () => {
             service?: string;
             status?: string;
             visibility?: string;
+            org_id?: number;
         }) => {
             const response = await api.get<ResearchJob[]>('/api/research-jobs', { params });
             return response.data;

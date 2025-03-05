@@ -81,6 +81,7 @@ async def research_jobs_get(
     service: Optional[str] = None,
     status: Optional[str] = None,
     visibility: Optional[str] = None,
+    org_id: Optional[int] = None,
 ) -> List[ResearchJobSchema]:
     """List research jobs with optional filtering."""
     # Build filter params from query parameters
@@ -91,6 +92,8 @@ async def research_jobs_get(
         filter_params["status"] = status
     if visibility:
         filter_params["visibility"] = visibility
+    if org_id and visibility == "org":
+        filter_params["owner_org_id"] = org_id
 
     # Get jobs list
     jobs = await research_service.list_jobs(
