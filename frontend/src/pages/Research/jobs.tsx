@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -157,19 +157,81 @@ const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
   );
 };
 
+// Define types based on the columns array
+type SortableColumn = Extract<keyof ResearchJob, typeof columns[number]['id']> & {
+  [K in typeof columns[number]['id']]: Extract<typeof columns[number], { id: K }>['sortable'] extends true ? K : never
+}[typeof columns[number]['id']];
+
+type FilterableColumn = Extract<keyof ResearchJob, typeof columns[number]['id']> & {
+  [K in typeof columns[number]['id']]: Extract<typeof columns[number], { id: K }>['filterable'] extends true ? K : never
+}[typeof columns[number]['id']];
+
 const ResearchJobsPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { researchJobsApi, organizationsApi } = useApi();
+  
+  // Ref to track if we've already redirected
+  const hasRedirectedRef = useRef(false);
+  
+  // For runtime reference, compute the actual column IDs
+  const sortableColumnIds = columns
+    .filter(column => column.sortable)
+    .map(column => column.id);
+  
+  const filterableColumnIds = columns
+    .filter(column => column.filterable)
+    .map(column => column.id);
+  
+  // Parse and validate orderBy - check against actual sortable columns
+  const queryOrderByParam = searchParams.get('orderBy') as string | null;
+  const queryOrderBy: SortableColumn = queryOrderByParam && sortableColumnIds.includes(queryOrderByParam as keyof ResearchJob) 
+    ? queryOrderByParam as SortableColumn
+    : 'created_at';
+  
+  // Parse and validate order
+  const queryOrderParam = searchParams.get('order');
+  const queryOrder: Order = queryOrderParam === 'asc' || queryOrderParam === 'desc' 
+    ? queryOrderParam 
+    : 'desc';
+  
+  const queryOrgId = searchParams.get('orgId') ? Number(searchParams.get('orgId')) : undefined;
+  
+  // Initialize filter state
+  const initialFilters: Partial<Record<FilterableColumn, string>> = {};
+  
+  // Filter parameters - only keep valid filterable columns
+  Array.from(searchParams.entries()).forEach(([key, value]) => {
+    if (filterableColumnIds.includes(key as keyof ResearchJob)) {
+      initialFilters[key as FilterableColumn] = value;
+    }
+  });
+  
+  // If queryOrgId is present, ensure visibility is set to 'org'
+  if (queryOrgId !== undefined) {
+    initialFilters.visibility = 'org';
+  }
+  
+  // State with more specific types
   const [jobs, setJobs] = useState<ResearchJob[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
-  const [orderBy, setOrderBy] = useState<keyof ResearchJob>('created_at');
-  const [order, setOrder] = useState<Order>('desc');
-  const [filters, setFilters] = useState<Partial<Record<keyof ResearchJob, string>>>({});
-  const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(undefined);
+  const [orderBy, setOrderBy] = useState<SortableColumn>(queryOrderBy);
+  const [order, setOrder] = useState<Order>(queryOrder);
+  const [filters, setFilters] = useState<Partial<Record<FilterableColumn, string>>>(initialFilters);
+  const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(queryOrgId);
+  const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
   const isFetchingRef = useRef(false);
+  
+  // Redirect to clean URL if we came in with query params
+  useEffect(() => {
+    if (searchParams.toString() && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      navigate('/research/jobs', { replace: true });
+    }
+  }, [searchParams, navigate]);
   
   const fetchJobs = async () => {
     // Skip if already fetching
@@ -194,23 +256,52 @@ const ResearchJobsPage: React.FC = () => {
     }
   };
 
+  // Only fetch jobs when organizations are loaded
   useEffect(() => {
-    fetchJobs();
-  }, [page, rowsPerPage, filters.visibility, selectedOrgId]);
+    if (organizationsLoaded) {
+      fetchJobs();
+    }
+  }, [page, rowsPerPage, filters.visibility, selectedOrgId, organizationsLoaded]);
 
+  // Load organizations and validate selectedOrgId
   useEffect(() => {
     const loadOrgs = async () => {
       try {
         const orgs = await organizationsApi.getOrganizations();
         setOrganizations(orgs);
+        
+        // Validate selectedOrgId if one is provided from query params
+        if (selectedOrgId !== undefined) {
+          const orgExists = orgs.some(org => org.id === selectedOrgId);
+          if (!orgExists) {
+            setSelectedOrgId(undefined);
+            
+            // If we're removing an invalid orgId, also clear the 'org' visibility filter
+            if (filters.visibility === 'org') {
+              setFilters(prev => {
+                const newFilters = { ...prev };
+                delete newFilters.visibility;
+                return newFilters;
+              });
+            }
+          } else if (filters.visibility !== 'org') {
+            // Ensure visibility is 'org' if we have a valid selectedOrgId
+            setFilters(prev => ({ ...prev, visibility: 'org' }));
+          }
+        }
+        
+        setOrganizationsLoaded(true);
       } catch (error) {
         console.error('Error loading organizations:', error);
+        setOrganizationsLoaded(true); // Still mark as loaded to avoid infinite loading
       }
     };
     loadOrgs();
   }, []);
 
-  const handleSort = (property: keyof ResearchJob) => {
+  // Update handleSort to use the more specific type
+  const handleSort = (property: SortableColumn) => {
+    // No need to check if sortable - the type system ensures it
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
@@ -225,11 +316,22 @@ const ResearchJobsPage: React.FC = () => {
     setPage(0);
   };
 
-  const handleFilterChange = (column: keyof ResearchJob) => (
+  // Update handleFilterChange to use the more specific type
+  const handleFilterChange = (column: FilterableColumn) => (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setFilters({ ...filters, [column]: event.target.value });
-    // setPage(1);
+    // No need to check if filterable - the type system ensures it
+    const newValue = event.target.value;
+    setFilters(prevFilters => {
+      const newFilters = { ...prevFilters };
+      if (newValue) {
+        newFilters[column] = newValue;
+      } else {
+        delete newFilters[column];
+      }
+      return newFilters;
+    });
+    // setPage(0);
   };
 
   const updateJob = (updatedJob: ResearchJob) => {
@@ -265,7 +367,8 @@ const ResearchJobsPage: React.FC = () => {
   const filteredJobs = jobs.filter((job) => {
     return Object.entries(filters).every(([key, value]) => {
       if (!value) return true;
-      const jobValue = job[key as keyof ResearchJob];
+      const columnKey = key as FilterableColumn;
+      const jobValue = job[columnKey];
       return jobValue?.toString().toLowerCase().includes(value.toLowerCase());
     });
   });
@@ -281,6 +384,26 @@ const ResearchJobsPage: React.FC = () => {
   });
 
   const paginatedJobs = sortedJobs;
+
+  // Update handleVisibilityChange
+  const handleVisibilityChange = (value: string, orgId?: number) => {
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      if (value) {
+        newFilters.visibility = value;
+      } else {
+        delete newFilters.visibility;
+      }
+      return newFilters;
+    });
+    
+    if (value !== 'org') {
+      setSelectedOrgId(undefined);
+    } else {
+      setSelectedOrgId(orgId);
+    }
+    setPage(0);
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -310,50 +433,45 @@ const ResearchJobsPage: React.FC = () => {
                 <TableCell /> {/* Expansion column */}
                 {columns.map((column) => (
                   <TableCell key={column.id}>
-                    {column.sortable ? (
-                      <TableSortLabel
-                        active={orderBy === column.id}
-                        direction={orderBy === column.id ? order : 'asc'}
-                        onClick={() => handleSort(column.id)}
-                      >
-                        {column.label}
-                      </TableSortLabel>
-                    ) : (
-                      <Typography
-                        variant="inherit"
-                        display="block"
-                        style={{ fontWeight: 'inherit', padding: '4px 0' }}
-                      >
-                        {column.label}
-                      </Typography>
-                    )}
-                    {column.filterable && column.id === 'visibility' ? (
-                      <VisibilityFilter
-                        value={filters[column.id] as string || ''}
-                        organizations={organizations}
-                        selectedOrgId={selectedOrgId}
-                        onChange={(value, orgId) => {
-                          setFilters(prev => ({
-                            ...prev,
-                            [column.id]: value
-                          }));
-                          if (value !== 'org') {
-                            setSelectedOrgId(undefined);
-                          } else {
-                            setSelectedOrgId(orgId);
-                          }
-                          setPage(0);
-                        }}
-                      />
-                    ) : column.filterable ? (
-                      <TextField
-                        size="small"
-                        placeholder={`Filter ${column.label}`}
-                        value={filters[column.id] || ''}
-                        onChange={handleFilterChange(column.id)}
-                        sx={{ mt: 1 }}
-                      />
-                    ) : null}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <Box sx={{ height: '28px', display: 'flex', alignItems: 'center' }}>
+                        {column.sortable ? (
+                          <TableSortLabel
+                            active={orderBy === column.id}
+                            direction={orderBy === column.id ? order : 'asc'}
+                            onClick={() => handleSort(column.id as SortableColumn)}
+                          >
+                            {column.label}
+                          </TableSortLabel>
+                        ) : (
+                          <Typography
+                            variant="inherit"
+                            display="block"
+                            style={{ fontWeight: 'inherit' }}
+                          >
+                            {column.label}
+                          </Typography>
+                        )}
+                      </Box>
+                      
+                      {column.filterable && column.id === 'visibility' ? (
+                        <VisibilityFilter
+                          value={filters[column.id as FilterableColumn] || ''}
+                          organizations={organizations}
+                          selectedOrgId={selectedOrgId}
+                          onChange={handleVisibilityChange}
+                        />
+                      ) : column.filterable ? (
+                        <TextField
+                          size="small"
+                          placeholder={`Filter ${column.label}`}
+                          value={filters[column.id as FilterableColumn] || ''}
+                          onChange={handleFilterChange(column.id as FilterableColumn)}
+                        />
+                      ) : (
+                        <Box sx={{ height: '40px' }} />
+                      )}
+                    </Box>
                   </TableCell>
                 ))}
               </TableRow>

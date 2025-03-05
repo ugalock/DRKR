@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   FormControl, 
-  InputLabel, 
   Select, 
   MenuItem, 
   SelectChangeEvent,
@@ -80,11 +79,8 @@ const VisibilityFilter: React.FC<{
   return (
     <>
       <FormControl size="small" sx={{ minWidth: 120 }}>
-        <InputLabel id="visibility-filter-label">Visibility</InputLabel>
         <Select
-          labelId="visibility-filter-label"
           value={value}
-          label="Visibility"
           onChange={handleSelectChange}
         >
           <MenuItem value="">All</MenuItem>
