@@ -1,12 +1,13 @@
 // frontend/src/App.tsx
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useApi } from './hooks/useApi';
 import { useAuth } from './hooks/useAuth';
 import { HomePage } from './pages/Home';
 import ResearchJobsPage from './pages/Research/jobs';
 import CreateResearchJobPage from './pages/Research/create';
-import { ResearchDetailPage } from './pages/Research/detail';
+import ResearchDetailPage from './pages/Research/detail';
+import ResearchEntriesPage from './pages/Research/entries';
 import Footer from './components/common/Footer';
 
 // Create a separate component for the authenticated routes to use useNavigate
@@ -51,6 +52,7 @@ const AuthenticatedApp = () => {
         <Route path="/home" element={<HomePage />} />
         <Route path="/research/jobs" element={<ResearchJobsPage />} />
         <Route path="/research/create-job" element={<CreateResearchJobPage />} />
+        <Route path="/research/entries" element={<ResearchEntriesPage />} />
         <Route path="/research/:id" element={<ResearchDetailPage />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
@@ -61,17 +63,20 @@ const AuthenticatedApp = () => {
 
 const App = () => {
   const { loginWithRedirect, isAuthenticated, isLoading } = useAuth();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     const handleAuth = async () => {
       if (!isLoading && !isAuthenticated) {
+        setIsRedirecting(true);
         await loginWithRedirect();
+        setIsRedirecting(false);
       }
     };
     handleAuth();
   }, [isLoading, isAuthenticated]);
 
-  if (isLoading) {
+  if (isLoading || isRedirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />

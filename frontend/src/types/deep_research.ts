@@ -17,7 +17,7 @@ export interface DeepResearch {
     questions_and_answers?: string | null;
     final_report: string;
     model_name: string | null;
-    model_params: string | null;
+    model_params: Record<string, any> | null;
     source_count: number;
     created_at: string;
     updated_at: string;
@@ -28,6 +28,8 @@ export interface DeepResearch {
     comments?: Comment[];
     ratings?: ResearchRating[];
     research_job?: ResearchJob;
+    avg_rating?: number | null;
+    creator_username?: string | null;
 }
 
 export interface CreateDeepResearchRequest {

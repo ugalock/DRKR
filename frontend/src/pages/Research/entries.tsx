@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Table,
@@ -8,7 +8,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Button,
   IconButton,
   Collapse,
   Box,
@@ -19,62 +18,38 @@ import {
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import VisibilityFilter from '../../components/VisibilityFilter';
 import Header from '../../components/common/Header';
 import Footer from '../../components/common/Footer';
 import NavBar from '../../components/common/NavBar';
-import { ResearchJob } from '../../types/research_job';
+import { DeepResearch } from '../../types/deep_research';
 import { Organization } from '../../types/organization';
 import { useApi } from '../../hooks/useApi';
 
 type Order = 'asc' | 'desc';
 
 interface Column {
-  id: keyof ResearchJob;
+  id: keyof DeepResearch;
   label: string;
   sortable: boolean;
   filterable: boolean;
 }
 
 const columns: Column[] = [
-  { id: 'service', label: 'Service', sortable: true, filterable: true },
+  { id: 'creator_username', label: 'Created By', sortable: true, filterable: true },
+  { id: 'avg_rating', label: 'Rating', sortable: true, filterable: false },
   { id: 'model_name', label: 'Model', sortable: true, filterable: true },
   { id: 'visibility', label: 'Visibility', sortable: false, filterable: true },
-  { id: 'status', label: 'Status', sortable: true, filterable: true },
   { id: 'created_at', label: 'Created', sortable: true, filterable: false },
   { id: 'updated_at', label: 'Last Updated', sortable: true, filterable: false },
 ];
 
 interface RowProps {
-  job: ResearchJob;
-  onCancelJob: (jobId: string) => Promise<void>;
-  onRefreshJob: (jobId: string) => Promise<void>;
+  entry: DeepResearch;
 }
 
-const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
+const EntryRow: React.FC<RowProps> = ({ entry }) => {
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleCancel = async () => {
-    setIsLoading(true);
-    try {
-      await onCancelJob(job.id);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setIsLoading(true);
-    try {
-      await onRefreshJob(job.id);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const canBeCancelled = !['completed', 'failed', 'cancelled'].includes(job.status);
 
   return (
     <>
@@ -84,8 +59,13 @@ const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        <TableCell>{job.service}</TableCell>
-        <TableCell>{job.model_name}</TableCell>
+        <TableCell>{entry.creator_username}</TableCell>
+        <TableCell>
+          {entry.ratings?.length ?? 0 > 0 
+            ? `${entry.avg_rating?.toFixed(1) || '0.0'} / 5.0`
+            : 'No ratings'}
+        </TableCell>
+        <TableCell>{entry.model_name}</TableCell>
         <TableCell>
           <Box
             component="span"
@@ -94,60 +74,46 @@ const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
               py: 0.5,
               borderRadius: 1,
               typography: 'body2',
-              bgcolor: job.visibility === 'public' 
+              bgcolor: entry.visibility === 'public' 
                 ? 'success.light' 
-                : job.visibility === 'org' 
+                : entry.visibility === 'org' 
                 ? 'info.light' 
                 : 'grey.200',
-              color: job.visibility === 'public' 
+              color: entry.visibility === 'public' 
                 ? 'success.dark' 
-                : job.visibility === 'org' 
+                : entry.visibility === 'org' 
                 ? 'info.dark' 
                 : 'grey.700',
             }}
           >
-            {job.visibility}
+            {entry.visibility}
           </Box>
         </TableCell>
-        <TableCell>{job.status}</TableCell>
-        <TableCell>{new Date(job.created_at!).toLocaleString()}</TableCell>
-        <TableCell>
-          {new Date(job.updated_at!).toLocaleString()}
-          {canBeCancelled && (
-            <IconButton 
-              size="small" 
-              onClick={handleRefresh}
-              disabled={isLoading}
-              sx={{ ml: 1 }}
-            >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          )}
-        </TableCell>
+        <TableCell>{new Date(entry.created_at!).toLocaleString()}</TableCell>
+        <TableCell>{new Date(entry.updated_at!).toLocaleString()}</TableCell>
       </TableRow>
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
               <Typography variant="h6" gutterBottom component="div">
-                Job Details
+                Entry Details
               </Typography>
-              <Typography>Job ID: {job.job_id}</Typography>
-              {job.model_params && (
-                <Typography>
-                  Parameters: {JSON.stringify(job.model_params, null, 2)}
-                </Typography>
-              )}
-              {canBeCancelled && (
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={handleCancel}
-                  disabled={isLoading}
-                  sx={{ mt: 2 }}
-                >
-                  Cancel Job
-                </Button>
+              <Typography variant="subtitle1" gutterBottom>
+                Prompt:
+              </Typography>
+              <Typography sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                {entry.prompt_text}
+              </Typography>
+              {entry.model_params && (
+                <>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Model Parameters:
+                  </Typography>
+                  <Typography component="pre" sx={{ mb: 2 }}>
+                    {JSON.stringify(entry.model_params, null, 2)}
+                  </Typography>
+                </>
               )}
             </Box>
           </Collapse>
@@ -158,21 +124,21 @@ const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
 };
 
 // Define types based on the columns array
-type SortableColumn = Extract<keyof ResearchJob, typeof columns[number]['id']> & {
-  [K in typeof columns[number]['id']]: Extract<typeof columns[number], { id: K }>['sortable'] extends true ? K : never
+type SortableColumn = Extract<keyof DeepResearch, typeof columns[number]['id']> & {
+    [K in typeof columns[number]['id']]: Extract<typeof columns[number], { id: K }>['sortable'] extends true ? K : never
 }[typeof columns[number]['id']];
 
-type FilterableColumn = Extract<keyof ResearchJob, typeof columns[number]['id']> & {
-  [K in typeof columns[number]['id']]: Extract<typeof columns[number], { id: K }>['filterable'] extends true ? K : never
-}[typeof columns[number]['id']];
+type FilterableColumn = Extract<keyof DeepResearch, typeof columns[number]['id']> & {
+    [K in typeof columns[number]['id']]: Extract<typeof columns[number], { id: K }>['filterable'] extends true ? K : never
+}[typeof columns[number]['id']];    
 
-const ResearchJobsPage: React.FC = () => {
+const ResearchEntriesPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { researchJobsApi, organizationsApi } = useApi();
+  const { deepResearchApi, organizationsApi } = useApi();
   
   // Ref to track if we've already redirected
-  const hasRedirectedRef = useRef(false);
+  const hasRedirectedRef = React.useRef(false);
   
   // For runtime reference, compute the actual column IDs
   const sortableColumnIds = columns
@@ -185,7 +151,7 @@ const ResearchJobsPage: React.FC = () => {
   
   // Parse and validate orderBy - check against actual sortable columns
   const queryOrderByParam = searchParams.get('orderBy') as string | null;
-  const queryOrderBy: SortableColumn = queryOrderByParam && sortableColumnIds.includes(queryOrderByParam as keyof ResearchJob) 
+  const queryOrderBy: SortableColumn = queryOrderByParam && sortableColumnIds.includes(queryOrderByParam as keyof DeepResearch) 
     ? queryOrderByParam as SortableColumn
     : 'created_at';
   
@@ -197,23 +163,21 @@ const ResearchJobsPage: React.FC = () => {
   
   const queryOrgId = searchParams.get('orgId') ? Number(searchParams.get('orgId')) : undefined;
   
-  // Initialize filter state
-  const initialFilters: Partial<Record<FilterableColumn, string>> = {};
-  
   // Filter parameters - only keep valid filterable columns
+  const initialFilters: Partial<Record<FilterableColumn, string>> = {};
   Array.from(searchParams.entries()).forEach(([key, value]) => {
-    if (filterableColumnIds.includes(key as keyof ResearchJob)) {
+    if (filterableColumnIds.includes(key as keyof DeepResearch)) {
       initialFilters[key as FilterableColumn] = value;
     }
   });
-  
+
   // If queryOrgId is present, ensure visibility is set to 'org'
   if (queryOrgId !== undefined) {
     initialFilters.visibility = 'org';
   }
   
-  // State with more specific types
-  const [jobs, setJobs] = useState<ResearchJob[]>([]);
+  // Initialize state
+  const [entries, setEntries] = useState<DeepResearch[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -224,17 +188,17 @@ const ResearchJobsPage: React.FC = () => {
   const [filters, setFilters] = useState<Partial<Record<FilterableColumn, string>>>(initialFilters);
   const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(queryOrgId);
   const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
-  const isFetchingRef = useRef(false);
+  const isFetchingRef = React.useRef(false);
   
   // Redirect to clean URL if we came in with query params
   useEffect(() => {
     if (searchParams.toString() && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
-      navigate('/research/jobs', { replace: true });
+      navigate('/research/entries', { replace: true });
     }
   }, [searchParams, navigate]);
   
-  const fetchJobs = async () => {
+  const fetchEntries = async () => {
     // Skip if already fetching
     if (isFetchingRef.current) return;
     
@@ -245,7 +209,7 @@ const ResearchJobsPage: React.FC = () => {
         setIsRefreshing(true);
       }
       
-      const response = await researchJobsApi.getResearchJobs({
+      const response = await deepResearchApi.getResearchItems({
         page: page + 1,
         limit: rowsPerPage,
         visibility: filters.visibility as string,
@@ -256,9 +220,9 @@ const ResearchJobsPage: React.FC = () => {
           Object.entries(filters).filter(([key]) => key !== 'visibility')
         )
       });
-      setJobs(response);
+      setEntries(response);
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Error fetching entries:', error);
     } finally {
       setInitialLoading(false);
       setIsRefreshing(false);
@@ -266,12 +230,12 @@ const ResearchJobsPage: React.FC = () => {
     }
   };
 
-  // Only fetch jobs when organizations are loaded
+  // Only fetch entries when organizations are loaded
   useEffect(() => {
     if (organizationsLoaded) {
-      fetchJobs();
+      fetchEntries();
     }
-  }, [page, rowsPerPage, filters, selectedOrgId, organizationsLoaded]);
+  }, [page, rowsPerPage, filters, selectedOrgId, organizationsLoaded, orderBy, order]);
 
   // Load organizations and validate selectedOrgId
   useEffect(() => {
@@ -311,7 +275,6 @@ const ResearchJobsPage: React.FC = () => {
 
   // Update handleSort to use the more specific type
   const handleSort = (property: SortableColumn) => {
-    // No need to check if sortable - the type system ensures it
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
@@ -330,7 +293,6 @@ const ResearchJobsPage: React.FC = () => {
   const handleFilterChange = (column: FilterableColumn) => (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    // No need to check if filterable - the type system ensures it
     const newValue = event.target.value;
     setFilters(prevFilters => {
       const newFilters = { ...prevFilters };
@@ -341,59 +303,8 @@ const ResearchJobsPage: React.FC = () => {
       }
       return newFilters;
     });
-    // setPage(0);
+    setPage(0);
   };
-
-  const updateJob = (updatedJob: ResearchJob) => {
-    setJobs(currentJobs => 
-      currentJobs.map(job => 
-        job.job_id === updatedJob.job_id ? updatedJob : job
-      )
-    );
-  };
-
-  const handleCancelJob = async (id: string) => {
-    try {
-      const updatedJob = await researchJobsApi.updateResearchJob(id, {
-        status: 'cancelled'
-      });
-      updateJob(updatedJob);
-    } catch (error) {
-      console.error('Error cancelling job:', error);
-    }
-  };
-
-  const handleRefreshJob = async (id: string) => {
-    try {
-      const updatedJob = await researchJobsApi.getResearchJob({
-        id: id
-      });
-      updateJob(updatedJob);
-    } catch (error) {
-      console.error('Error refreshing job:', error);
-    }
-  };
-
-  const filteredJobs = jobs.filter((job) => {
-    return Object.entries(filters).every(([key, value]) => {
-      if (!value) return true;
-      const columnKey = key as FilterableColumn;
-      const jobValue = job[columnKey];
-      return jobValue?.toString().toLowerCase().includes(value.toLowerCase());
-    });
-  });
-
-  const sortedJobs = [...filteredJobs].sort((a, b) => {
-    const aValue = a[orderBy];
-    const bValue = b[orderBy];
-    
-    if (!aValue || !bValue) return 0;
-    
-    const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-    return order === 'desc' ? -comparison : comparison;
-  });
-
-  const paginatedJobs = sortedJobs;
 
   // Update handleVisibilityChange
   const handleVisibilityChange = (value: string, orgId?: number) => {
@@ -421,21 +332,11 @@ const ResearchJobsPage: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header subtitle="Research Jobs" />
+      <Header subtitle="Research Entries" />
 
       <NavBar />
 
       <main style={{ flex: 1, padding: '2rem' }}>
-        <Box sx={{ mb: 3 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate('/research/create-job')}
-          >
-            Create New Job
-          </Button>
-        </Box>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -487,19 +388,17 @@ const ResearchJobsPage: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody sx={{ opacity: isRefreshing ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-              {paginatedJobs.map((job) => (
-                <JobRow 
-                  key={job.job_id} 
-                  job={job} 
-                  onCancelJob={handleCancelJob}
-                  onRefreshJob={handleRefreshJob}
+              {entries.map((entry) => (
+                <EntryRow 
+                  key={entry.id} 
+                  entry={entry}
                 />
               ))}
             </TableBody>
           </Table>
           <TablePagination
             component="div"
-            count={filteredJobs.length}
+            count={entries.length}
             page={page}
             onPageChange={handleChangePage}
             rowsPerPage={rowsPerPage}
@@ -515,4 +414,4 @@ const ResearchJobsPage: React.FC = () => {
   );
 };
 
-export default ResearchJobsPage;
+export default ResearchEntriesPage; 

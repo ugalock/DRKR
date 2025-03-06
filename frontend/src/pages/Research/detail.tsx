@@ -44,7 +44,7 @@ interface QuestionAnswer {
   answer: string;
 }
 
-const ResearchDetail: React.FC = () => {
+const ResearchDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { deepResearchApi } = useApi();
   
@@ -736,5 +736,4 @@ const ResearchDetail: React.FC = () => {
   );
 };
 
-export const ResearchDetailPage = ResearchDetail;
-export default ResearchDetail; 
+export default ResearchDetailPage; 

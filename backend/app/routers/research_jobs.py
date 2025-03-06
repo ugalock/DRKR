@@ -31,7 +31,7 @@ from app.schemas.research_job_update_request import ResearchJobUpdateRequest
 from app.schemas.research_job_get_request import ResearchJobGetRequest
 from app.schemas.research_job_answer_request import ResearchJobAnswerRequest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_, desc, asc
 
 from app.services.authentication import get_current_user
 from app.db import get_db
@@ -82,30 +82,60 @@ async def research_jobs_get(
     status: Optional[str] = None,
     visibility: Optional[str] = None,
     org_id: Optional[int] = None,
+    order_by: Optional[str] = None,
+    order: Optional[str] = "desc",
+    model_name: Optional[str] = None,
 ) -> List[ResearchJobSchema]:
     """List research jobs with optional filtering."""
-    # Build filter params from query parameters
-    filter_params = {}
-    if service:
-        filter_params["service"] = service
-    if status:
-        filter_params["status"] = status
-    if visibility:
-        filter_params["visibility"] = visibility
-    if org_id and visibility == "org":
-        filter_params["owner_org_id"] = org_id
-
-    # Get jobs list
-    jobs = await research_service.list_jobs(
-        db=db,
-        user_id=current_user.id,
-        page=page,
-        limit=limit,
-        filter_params=filter_params
+    # Calculate offset
+    offset = (page - 1) * limit
+    
+    # Build base query with username
+    query = (
+        select(ResearchJobModel)
+        .join(User, ResearchJobModel.user_id == User.id)
     )
     
-    # Filter for permissions
-    return [job for job in jobs if check_research_job_permissions(job, current_user)]
+    # Add visibility filters
+    query = query.where(
+        or_(
+            ResearchJobModel.visibility == "public",
+            ResearchJobModel.user_id == current_user.id,
+            and_(
+                ResearchJobModel.visibility == "org",
+                ResearchJobModel.owner_org_id.isnot(None),
+                ResearchJobModel.owner_org_id.in_([
+                    m.organization_id for m in current_user.organization_memberships
+                ])
+            )
+        )
+    )
+
+    # Add filters
+    if service:
+        query = query.where(ResearchJobModel.service.ilike(f"%{service}%"))
+    if status:
+        query = query.where(ResearchJobModel.status == status)
+    if org_id is not None:
+        query = query.where(ResearchJobModel.owner_org_id == org_id)
+    elif visibility:
+        query = query.where(ResearchJobModel.visibility == visibility)
+    if model_name:
+        query = query.where(ResearchJobModel.model_name.ilike(f"%{model_name}%"))
+
+    # Add sorting
+    sort_col = getattr(ResearchJobModel, order_by or 'created_at')
+    query = query.order_by(desc(sort_col) if order == 'desc' else asc(sort_col))
+    
+    # Apply pagination
+    query = query.offset(offset).limit(limit)
+    
+    # Execute query
+    result = await db.execute(query)
+    jobs = result.scalars().all()
+    
+    # Filter for permissions and convert to schema
+    return [ResearchJobSchema.model_validate(job) for job in jobs if check_research_job_permissions(job, current_user)]
 
 @router.post(
     "/research-jobs/get",

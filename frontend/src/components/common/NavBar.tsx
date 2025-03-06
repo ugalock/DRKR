@@ -29,6 +29,14 @@ const NavBar: React.FC = () => {
           >
             Research Jobs
           </Button>
+          <Button
+            component={Link}
+            to="/research/entries"
+            color={isActive('/research/entries') ? 'primary' : 'inherit'}
+            sx={{ textTransform: 'none' }}
+          >
+            Deep Research
+          </Button>
         </Box>
 
         {isAuthenticated && (

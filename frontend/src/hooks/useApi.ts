@@ -56,9 +56,18 @@ export const useApi = () => {
     }, [getAccessTokenSilently]);
 
     const deepResearchApi = {
-        getResearchItems: async (params?: { page?: number; limit?: number }) => {
+        getResearchItems: async (params?: { 
+            page?: number; 
+            limit?: number;
+            visibility?: string;
+            org_id?: number;
+            order_by?: string;
+            order?: 'asc' | 'desc';
+            creator_username?: string;
+            model_name?: string;
+            [key: string]: string | number | undefined; // Allow additional string filters
+        }) => {
             const response = await api.get<DeepResearch[]>('/api/deep-research', { params });
-            console.log(response.data);
             return response.data;
         },
 
@@ -118,9 +127,13 @@ export const useApi = () => {
             page?: number; 
             limit?: number;
             service?: string;
-            status?: string;
+            model_name?: string;
             visibility?: string;
+            status?: string;
             org_id?: number;
+            order_by?: string;
+            order?: 'asc' | 'desc';
+            [key: string]: string | number | undefined; // Allow additional string filters
         }) => {
             const response = await api.get<ResearchJob[]>('/api/research-jobs', { params });
             return response.data;

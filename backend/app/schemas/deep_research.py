@@ -58,7 +58,9 @@ class DeepResearch(CustomBaseModel):
     comments: Optional[List[Comment]] = None
     ratings: Optional[List[Rating]] = None  
     research_job: Optional[ResearchJob] = None
-    __properties: ClassVar[List[str]] = ["id", "user_id", "owner_user_id", "owner_org_id", "visibility", "title", "prompt_text", "questions_and_answers", "final_report", "model_name", "model_params", "source_count", "created_at", "updated_at", "chunks", "summaries", "sources", "auto_metadata", "comments", "ratings", "research_job"]
+    avg_rating: Optional[float] = None
+    creator_username: Optional[str] = None
+    __properties: ClassVar[List[str]] = ["id", "user_id", "owner_user_id", "owner_org_id", "visibility", "title", "prompt_text", "questions_and_answers", "final_report", "model_name", "model_params", "source_count", "created_at", "updated_at", "chunks", "summaries", "sources", "auto_metadata", "comments", "ratings", "research_job", "avg_rating", "creator_username"]
 
     model_config = {
         "populate_by_name": True,

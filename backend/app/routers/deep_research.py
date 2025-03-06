@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from typing import Dict, List  # noqa: F401
+from typing import Dict, List, Optional  # noqa: F401
 import importlib
 import pkgutil
 
@@ -22,10 +22,10 @@ from fastapi import (  # noqa: F401
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, or_, and_, select
+from sqlalchemy import func, or_, and_, select, desc, asc
 from sqlalchemy.orm import selectinload
 from app.db import get_db
-from app.models import DeepResearch as DeepResearchModel
+from app.models import DeepResearch as DeepResearchModel, ResearchRating, User
 from app.schemas.extra_models import TokenModel  # noqa: F401
 from pydantic import StrictInt
 from typing import Any, List
@@ -72,14 +72,32 @@ def get_deep_research_options():
 async def research_get(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Items per page"),
+    visibility: Optional[str] = None,
+    org_id: Optional[int] = None,
+    order_by: Optional[str] = None,
+    order: Optional[str] = "desc",
+    creator_username: Optional[str] = None,
+    model_name: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ) -> List[DeepResearch]:
     # Calculate offset
     offset = (page - 1) * limit
     
-    # Build base query for items user can access using select
-    query = select(DeepResearchModel).where(
+    # Build base query with avg_rating calculation and username
+    query = (
+        select(
+            DeepResearchModel,
+            func.coalesce(func.avg(ResearchRating.rating_value), 0.0).label('avg_rating'),
+            User.username.label('creator_username')
+        )
+        .join(User, DeepResearchModel.user_id == User.id)
+        .outerjoin(ResearchRating)
+        .group_by(DeepResearchModel.id, User.username)
+    )
+    
+    # Add visibility filters
+    query = query.where(
         or_(
             DeepResearchModel.visibility == "public",
             DeepResearchModel.user_id == current_user.id,
@@ -92,17 +110,45 @@ async def research_get(
             )
         )
     )
+
+    # Add org filter if specified
+    if org_id is not None:
+        query = query.where(DeepResearchModel.owner_org_id == org_id)
+    elif visibility: # Add visibility filter if specified
+        query = query.where(DeepResearchModel.visibility == visibility)
+
+    # Add creator_username filter if specified
+    if creator_username:
+        query = query.where(User.username.ilike(f"%{creator_username}%"))
+
+    # Add model_name filter if specified
+    if model_name:
+        query = query.where(DeepResearchModel.model_name.ilike(f"%{model_name}%"))
+
+    # Add sorting
+    if order_by == 'avg_rating':
+        sort_col = func.avg(ResearchRating.rating_value)
+    else:
+        sort_col = getattr(DeepResearchModel, order_by or 'created_at')
+    
+    query = query.order_by(desc(sort_col) if order == 'desc' else asc(sort_col))
     
     # Apply pagination and load relationships
     query = query.options(*get_deep_research_options()) \
-                .order_by(DeepResearchModel.created_at.desc()) \
                 .offset(offset) \
                 .limit(limit)
     
     # Execute query
     result = await db.execute(query)
-    items = result.scalars().all()
-    return [DeepResearch.model_validate(item, strict=False) for item in items]
+    items = []
+    for item, avg_rating, creator_username in result:
+        # Convert to dict to add computed fields
+        item_dict = DeepResearch.model_validate(item).model_dump()
+        item_dict['avg_rating'] = float(avg_rating) if avg_rating is not None else None
+        item_dict['creator_username'] = creator_username
+        items.append(item_dict)
+    
+    return [DeepResearch.model_validate(item) for item in items]
 
 
 @router.delete(
