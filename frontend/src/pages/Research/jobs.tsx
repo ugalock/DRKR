@@ -16,6 +16,7 @@ import {
   TablePagination,
   TableSortLabel,
   TextField,
+  Tooltip,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -26,7 +27,9 @@ import Footer from '../../components/common/Footer';
 import NavBar from '../../components/common/NavBar';
 import { ResearchJob } from '../../types/research_job';
 import { Organization } from '../../types/organization';
+import { User } from '../../types/user';
 import { useApi } from '../../hooks/useApi';
+import { formatTimestamp } from '../../utils/formatters';
 
 type Order = 'asc' | 'desc';
 
@@ -48,11 +51,13 @@ const columns: Column[] = [
 
 interface RowProps {
   job: ResearchJob;
-  onCancelJob: (jobId: string) => Promise<void>;
-  onRefreshJob: (jobId: string) => Promise<void>;
+  orgName?: string;
+  user_id?: number;
+  onCancelJob: (jobId: number) => Promise<void>;
+  onRefreshJob: (jobId: number) => Promise<void>;
 }
 
-const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
+const JobRow: React.FC<RowProps> = ({ job, orgName, user_id, onCancelJob, onRefreshJob }) => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -74,7 +79,7 @@ const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
     }
   };
 
-  const canBeCancelled = !['completed', 'failed', 'cancelled'].includes(job.status);
+  const canBeCancelled = !['completed', 'failed', 'cancelled'].includes(job.status) && job.user_id === user_id;
 
   return (
     <>
@@ -87,32 +92,39 @@ const JobRow: React.FC<RowProps> = ({ job, onCancelJob, onRefreshJob }) => {
         <TableCell>{job.service}</TableCell>
         <TableCell>{job.model_name}</TableCell>
         <TableCell>
-          <Box
-            component="span"
-            sx={{
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              typography: 'body2',
-              bgcolor: job.visibility === 'public' 
-                ? 'success.light' 
-                : job.visibility === 'org' 
-                ? 'info.light' 
-                : 'grey.200',
-              color: job.visibility === 'public' 
-                ? 'success.dark' 
-                : job.visibility === 'org' 
-                ? 'info.dark' 
-                : 'grey.700',
-            }}
-          >
-            {job.visibility}
-          </Box>
+          <Tooltip title={orgName || job.visibility}>
+            <Box
+              component="span"
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                typography: 'body2',
+                maxWidth: '150px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: 'inline-block',
+                bgcolor: job.visibility === 'public' 
+                  ? 'success.light' 
+                  : job.visibility === 'org' 
+                  ? 'info.light' 
+                  : 'grey.200',
+                color: job.visibility === 'public' 
+                  ? 'success.dark' 
+                  : job.visibility === 'org' 
+                  ? 'info.dark' 
+                  : 'grey.700',
+              }}
+            >
+              {orgName || job.visibility}
+            </Box>
+          </Tooltip>
         </TableCell>
         <TableCell>{job.status}</TableCell>
-        <TableCell>{new Date(job.created_at!).toLocaleString()}</TableCell>
+        <TableCell>{formatTimestamp(job.created_at!)}</TableCell>
         <TableCell>
-          {new Date(job.updated_at!).toLocaleString()}
+          {formatTimestamp(job.updated_at!)}
           {canBeCancelled && (
             <IconButton 
               size="small" 
@@ -169,7 +181,7 @@ type FilterableColumn = Extract<keyof ResearchJob, typeof columns[number]['id']>
 const ResearchJobsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { researchJobsApi, organizationsApi } = useApi();
+  const { researchJobsApi, organizationsApi, userApi } = useApi();
   
   // Ref to track if we've already redirected
   const hasRedirectedRef = useRef(false);
@@ -215,6 +227,8 @@ const ResearchJobsPage: React.FC = () => {
   // State with more specific types
   const [jobs, setJobs] = useState<ResearchJob[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [orgNameMap, setOrgNameMap] = useState<Record<number, string>>({});
+  const [user, setUser] = useState<User | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [page, setPage] = useState(0);
@@ -233,6 +247,14 @@ const ResearchJobsPage: React.FC = () => {
       navigate('/research/jobs', { replace: true });
     }
   }, [searchParams, navigate]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = await userApi.getCurrentUser();
+      setUser(user);
+    };
+    fetchUser();
+  }, []);
   
   const fetchJobs = async () => {
     // Skip if already fetching
@@ -273,7 +295,7 @@ const ResearchJobsPage: React.FC = () => {
     }
   }, [page, rowsPerPage, filters, selectedOrgId, organizationsLoaded]);
 
-  // Load organizations and validate selectedOrgId
+  // Load organizations, validate selectedOrgId, and create lookup map
   useEffect(() => {
     const loadOrgs = async () => {
       try {
@@ -285,7 +307,7 @@ const ResearchJobsPage: React.FC = () => {
           const orgExists = orgs.some(org => org.id === selectedOrgId);
           if (!orgExists) {
             setSelectedOrgId(undefined);
-            
+
             // If we're removing an invalid orgId, also clear the 'org' visibility filter
             if (filters.visibility === 'org') {
               setFilters(prev => {
@@ -299,6 +321,14 @@ const ResearchJobsPage: React.FC = () => {
             setFilters(prev => ({ ...prev, visibility: 'org' }));
           }
         }
+        // Create organization name lookup map
+        const lookup = orgs.reduce((acc, org) => {
+          if (org.id !== undefined) {
+            acc[org.id] = org.name;
+          }
+          return acc;
+        }, {} as Record<number, string>);
+        setOrgNameMap(lookup);
         
         setOrganizationsLoaded(true);
       } catch (error) {
@@ -352,7 +382,7 @@ const ResearchJobsPage: React.FC = () => {
     );
   };
 
-  const handleCancelJob = async (id: string) => {
+  const handleCancelJob = async (id: number) => {
     try {
       const updatedJob = await researchJobsApi.updateResearchJob(id, {
         status: 'cancelled'
@@ -363,7 +393,7 @@ const ResearchJobsPage: React.FC = () => {
     }
   };
 
-  const handleRefreshJob = async (id: string) => {
+  const handleRefreshJob = async (id: number) => {
     try {
       const updatedJob = await researchJobsApi.getResearchJob({
         id: id
@@ -490,7 +520,10 @@ const ResearchJobsPage: React.FC = () => {
               {paginatedJobs.map((job) => (
                 <JobRow 
                   key={job.job_id} 
-                  job={job} 
+                  job={job}
+                  user_id={user?.id}
+                  orgName={job.visibility === 'org' && job.owner_org_id ? 
+                    orgNameMap[Number(job.owner_org_id)] : undefined}
                   onCancelJob={handleCancelJob}
                   onRefreshJob={handleRefreshJob}
                 />

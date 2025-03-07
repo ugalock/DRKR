@@ -59,17 +59,15 @@ async def tags_get(
     # User-specific tags
     user_tags_stmt = select(TagModel).where(TagModel.user_id == current_user.id)
     
-    # Union of global and user tags
-    combined_stmt = global_tags_stmt.union(user_tags_stmt)
-    
-    # Add organization-specific tags if user is in any organizations
+    # Get organization-specific tags if user is in any organizations
     org_ids = [membership.organization_id for membership in current_user.organization_memberships]
+    
+    # Use union_all to combine all statements at once
     if org_ids:
         org_tags_stmt = select(TagModel).where(TagModel.organization_id.in_(org_ids))
-        combined_stmt = combined_stmt.union(org_tags_stmt)
-    
-    # Add ordering
-    combined_stmt = combined_stmt.order_by(TagModel.name)
+        combined_stmt = union_all(global_tags_stmt, user_tags_stmt, org_tags_stmt)
+    else:
+        combined_stmt = union_all(global_tags_stmt, user_tags_stmt)
     
     # Execute the query
     result = await db.execute(combined_stmt)

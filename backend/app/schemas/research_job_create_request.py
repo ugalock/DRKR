@@ -34,7 +34,9 @@ class ResearchJobCreateRequest(CustomBaseModel):
     user_id: Optional[StrictStr] = None
     model: Optional[StrictStr] = None
     model_params: Optional[Dict[str, Any]] = None
-    __properties: ClassVar[List[str]] = ["service", "prompt", "user_id", "model", "model_params"]
+    visibility: Optional[StrictStr] = "private"
+    org_id: Optional[int] = None
+    __properties: ClassVar[List[str]] = ["service", "prompt", "user_id", "model", "model_params", "visibility", "org_id"]
 
     model_config = {
         "populate_by_name": True,

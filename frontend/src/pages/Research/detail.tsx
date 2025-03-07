@@ -27,16 +27,20 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import LinkIcon from '@mui/icons-material/Link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import Header from '../../components/common/Header';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { useApi } from '../../hooks/useApi';
 import { DeepResearch } from '../../types/deep_research';
 import { Tag } from '../../types/tag';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
+import { Organization } from '../../types/organization';
+import { Visibility } from '../../types/research_job';
+import { formatTimestamp } from '../../utils/formatters';
+import VisibilityFilter from '../../components/VisibilityFilter';
 
 // Interface for parsed Q&A pair
 interface QuestionAnswer {
@@ -46,7 +50,7 @@ interface QuestionAnswer {
 
 const ResearchDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { deepResearchApi } = useApi();
+  const { deepResearchApi, organizationsApi } = useApi();
   
   const [research, setResearch] = useState<DeepResearch | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -54,17 +58,24 @@ const ResearchDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<QuestionAnswer[]>([]);
   const [isMarkdown, setIsMarkdown] = useState<boolean>(false);
-  
   // Add state for accordions
   const [jobExpanded, setJobExpanded] = useState<boolean>(false);
   const [questionsExpanded, setQuestionsExpanded] = useState<boolean>(false);
   const [reportExpanded, setReportExpanded] = useState<boolean>(false);
-  const [sourcesExpanded, setSourcesExpanded] = useState<boolean>(false);
-  
+  const [sourcesExpanded, setSourcesExpanded] = useState<boolean>(false);  
   // Report view selection
   const [selectedReportView, setSelectedReportView] = useState<string>("full");
   const [reportViewAnchorEl, setReportViewAnchorEl] = useState<null | HTMLElement>(null);
   const [summariesAnchorEl, setSummariesAnchorEl] = useState<null | HTMLElement>(null);
+  // Visibility state
+  const [visibility, setVisibility] = useState<Visibility>('private');
+  const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(undefined);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [orgNameMap, setOrgNameMap] = useState<Record<number, string>>({});
+  const [loadingOrganizations, setLoadingOrganizations] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   
   // Create a mapping for summary lengths to user-friendly names
   const summaryNameMap: Record<string, string> = {
@@ -153,6 +164,86 @@ const ResearchDetailPage: React.FC = () => {
 
     fetchResearchData();
   }, [id]); // Remove deepResearchApi to prevent infinite loop
+
+  // Fetch organizations
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        setLoadingOrganizations(true);
+        const organizations = await organizationsApi.getOrganizations();
+        setOrganizations(organizations);
+        
+        // Create organization name lookup map
+        const lookup = organizations.reduce((acc, org) => {
+          if (org.id !== undefined) {
+            acc[org.id] = org.name;
+          }
+          return acc;
+        }, {} as Record<number, string>);
+        setOrgNameMap(lookup);
+      } catch (error) {
+        console.error('Error fetching organizations:', error);
+      } finally {
+        setLoadingOrganizations(false);
+      }
+    };
+    
+    fetchOrganizations();
+  }, []);
+
+  // Set initial visibility state when research data is loaded
+  useEffect(() => {
+    if (research) {
+      setVisibility(research.visibility || 'private');
+      setSelectedOrgId(research.owner_org_id ? Number(research.owner_org_id) : undefined);
+    }
+  }, [research]);
+
+  // Handle visibility change
+  const handleVisibilityChange = (value: string, orgId?: number) => {
+    setVisibility(value as Visibility);
+    if (value !== 'org') {
+      setSelectedOrgId(undefined);
+    } else {
+      setSelectedOrgId(orgId);
+    }
+  };
+
+  // Check if visibility has changed from original
+  const hasVisibilityChanged = (): boolean => {
+    if (!research) return false;
+    
+    if (visibility !== research.visibility) return true;
+    if (visibility === 'org') {
+      // For org visibility, also check if org_id changed
+      const researchOrgId = research.owner_org_id ? Number(research.owner_org_id) : undefined;
+      return selectedOrgId !== researchOrgId;
+    }
+    return false;
+  };
+
+  // Handle saving visibility changes
+  const handleSaveVisibilityChanges = async () => {
+    if (!research || !hasVisibilityChanged()) return;
+    
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+      
+      const updatedResearch = await deepResearchApi.updateResearch(research.id, {
+        visibility: visibility,
+        owner_org_id: visibility === 'org' ? selectedOrgId : undefined
+      });
+      
+      // Update the research object with new values
+      setResearch(updatedResearch);
+    } catch (error) {
+      console.error('Error updating research visibility:', error);
+      setSaveError('Failed to update visibility. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Toggle accordion handlers
   const handleJobToggle = () => {
@@ -263,9 +354,7 @@ const ResearchDetailPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-        <Typography variant="h5">Research Details</Typography>
-      </header>
+      <Header subtitle="Research Details" />
       <NavBar />
       <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
         <Paper sx={{ p: 3 }}>
@@ -280,17 +369,60 @@ const ResearchDetailPage: React.FC = () => {
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="subtitle1" color="text.secondary">
-                Created: {new Date(research.created_at).toLocaleString()}
+                Created: {formatTimestamp(research.created_at)}
                 {research.created_at !== research.updated_at && 
-                  ` | Updated: ${new Date(research.updated_at).toLocaleString()}`}
+                  ` | Updated: ${formatTimestamp(research.updated_at)}`}
               </Typography>
-              <Typography variant="subtitle1" color="text.secondary">
-                Visibility: {research.visibility}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {selectedOrgId && visibility === 'org' && organizations.length > 0 && (
+                  <Box
+                    component="span"
+                    sx={{
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      typography: 'body2',
+                      bgcolor: 'info.dark',
+                      color: 'white',
+                    }}
+                  >
+                    {orgNameMap[selectedOrgId] || 'Organization'}
+                  </Box>
+                )}
+                <VisibilityFilter
+                  value={visibility}
+                  onChange={handleVisibilityChange}
+                  organizations={organizations}
+                  selectedOrgId={selectedOrgId}
+                  showAllOption={false}
+                  showAllOrganizationsOption={false}
+                  loadingOrganizations={loadingOrganizations}
+                />
+              </Box>
             </Box>
-          </Box>
+            
+            {/* Save Changes button - only shown when visibility has changed */}
+            {hasVisibilityChanged() && (
+              <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 1, mb: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSaveVisibilityChanges}
+                  disabled={isSaving}
+                  startIcon={isSaving ? <CircularProgress size={20} /> : null}
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+                {saveError && (
+                  <Typography color="error" variant="body2" sx={{ ml: 2, alignSelf: 'center' }}>
+                    {saveError}
+                  </Typography>
+                )}
+              </Box>
+            )}
 
-          <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 2 }} />
+          </Box>
 
           <Grid2 container spacing={3}>
             <Grid2 size={{ xs: 12 }}>
@@ -336,11 +468,11 @@ const ResearchDetailPage: React.FC = () => {
                         
                         <Box sx={{ display: 'flex', gap: 4 }}>
                           <Typography variant="body1">
-                            <strong>Created:</strong> {new Date(research.research_job.created_at || research.created_at).toLocaleString()}
+                            <strong>Created:</strong> {formatTimestamp(research.research_job.created_at || research.created_at)}
                           </Typography>
                           {research.research_job.updated_at && research.research_job.created_at !== research.research_job.updated_at && (
                             <Typography variant="body1">
-                              <strong>Updated:</strong> {new Date(research.research_job.updated_at).toLocaleString()}
+                              <strong>Updated:</strong> {formatTimestamp(research.research_job.updated_at)}
                             </Typography>
                           )}
                         </Box>

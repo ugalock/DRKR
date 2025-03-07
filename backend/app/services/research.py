@@ -16,7 +16,14 @@ from fastapi import HTTPException
 import openai
 
 from app.config import settings
-from app.models import ResearchJob, ResearchService as ResearchServiceDB, ResearchServiceModel, DeepResearch, ResearchSource
+from app.models import (
+    ResearchJob,
+    ResearchService as ResearchServiceDB,
+    ResearchServiceModel,
+    DeepResearch,
+    ResearchSource,
+    OrganizationMember
+)
 from app.schemas.research_job import ResearchJob as ResearchJobSchema
 from app.schemas.research_job_create_request import ResearchJobCreateRequest
 from app.tasks.research_processing import process_research_data
@@ -124,10 +131,26 @@ class ResearchService:
         breadth: int = 4,
         depth: int = 2,
         model: Optional[str] = None,
-        model_params: Optional[Dict] = None
+        model_params: Optional[Dict] = None,
+        visibility: Optional[str] = "private", # default to private
+        org_id: Optional[int] = None
     ) -> Dict:
         """Start a research job via the specified service."""
         await self._validate_service(db, service)
+
+        if org_id:
+            # Check if user is a member of the organization
+            stmt = select(OrganizationMember).where(
+                OrganizationMember.user_id == int(user_id),
+                OrganizationMember.organization_id == org_id
+            )
+            result = await db.execute(stmt)
+            db_member = result.scalar_one_or_none()
+            if not db_member:
+                raise HTTPException(
+                    status_code=403,
+                    detail="User is not a member of the organization"
+                )
         
         if service == "open-dr":
             # Get service configuration from database
@@ -186,7 +209,8 @@ class ResearchService:
                     prompt=prompt,
                     model_name=model,
                     model_params=params,
-                    visibility="private"  # Default to private
+                    visibility="org" if org_id else visibility,
+                    owner_org_id=org_id
                 )
                 
                 db.add(db_job)
@@ -384,11 +408,12 @@ class ResearchService:
                     # Link the job to the research
                     db_job.deep_research_id = deep_research.id
                     await db.commit()
+                    await db.refresh(db_job)
                     # Trigger async processing tasks
                     process_research_data.delay(deep_research.id)
-
-                await db.commit()
-                await db.refresh(db_job)
+                else:
+                    await db.commit()
+                    await db.refresh(db_job)
                 
                 return {
                     "job": ResearchJobSchema.model_validate(db_job),
@@ -399,7 +424,7 @@ class ResearchService:
         self,
         db: AsyncSession,
         service: str,
-        user_id: str,
+        user_id: int,
         job_id: str
     ) -> Dict:
         """Cancel an in-progress research job."""
@@ -411,7 +436,8 @@ class ResearchService:
             ResearchJob.user_id == user_id,
             ResearchJob.service == service
         )
-        db_job = await db.execute(stmt).scalar_one_or_none()
+        db_job = await db.execute(stmt)
+        db_job = db_job.scalar_one_or_none()
         
         if not db_job:
             raise HTTPException(
@@ -429,7 +455,7 @@ class ResearchService:
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(url + "/research/cancel", params={
-                    "user_id": user_id,
+                    "user_id": str(user_id),
                     "job_id": job_id
                 })
                 

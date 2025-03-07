@@ -8,6 +8,9 @@ import ResearchJobsPage from './pages/Research/jobs';
 import CreateResearchJobPage from './pages/Research/create';
 import ResearchDetailPage from './pages/Research/detail';
 import ResearchEntriesPage from './pages/Research/entries';
+import OrganizationListPage from './pages/Organization/list';
+import OrganizationDetailPage from './pages/Organization/detail';
+import InviteAcceptPage from './pages/Organization/invite';
 import Footer from './components/common/Footer';
 
 // Create a separate component for the authenticated routes to use useNavigate
@@ -54,9 +57,11 @@ const AuthenticatedApp = () => {
         <Route path="/research/create-job" element={<CreateResearchJobPage />} />
         <Route path="/research/entries" element={<ResearchEntriesPage />} />
         <Route path="/research/:id" element={<ResearchDetailPage />} />
+        <Route path="/organizations" element={<OrganizationListPage />} />
+        <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
+        <Route path="/invites/:token/accept" element={<InviteAcceptPage />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
-      <Footer />
     </div>
   );
 };

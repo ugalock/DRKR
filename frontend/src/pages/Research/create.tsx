@@ -31,7 +31,9 @@ import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { useApi } from '../../hooks/useApi';
 import { ResearchService, AiModel } from '../../types/research_service';
-import { ResearchJob, ResearchJobCreateResponse, ResearchJobStatus } from '../../types/research_job';
+import { ResearchJob, ResearchJobCreateResponse, ResearchJobStatus, Visibility } from '../../types/research_job';
+import VisibilityFilter from '../../components/VisibilityFilter';
+import { Organization } from '../../types/organization';
 
 interface ModelParam {
   key: string;
@@ -39,7 +41,7 @@ interface ModelParam {
 }
 
 const CreateResearchJobPage: React.FC = () => {
-  const { researchServicesApi, researchJobsApi } = useApi();
+  const { researchServicesApi, researchJobsApi, organizationsApi } = useApi();
   
   // Form state
   const [services, setServices] = useState<ResearchService[]>([]);
@@ -47,10 +49,14 @@ const CreateResearchJobPage: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [prompt, setPrompt] = useState<string>('');
   const [modelParams, setModelParams] = useState<ModelParam[]>([{ key: '', value: '' }]);
+  const [visibility, setVisibility] = useState<Visibility>('private');
+  const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(undefined);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   
   // UI state
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingServices, setLoadingServices] = useState<boolean>(true);
+  const [loadingOrganizations, setLoadingOrganizations] = useState<boolean>(false);
   const [tokenCount, setTokenCount] = useState<number>(0);
   const [maxTokens, setMaxTokens] = useState<number>(0);
   
@@ -102,6 +108,27 @@ const CreateResearchJobPage: React.FC = () => {
     };
 
     fetchServices();
+  }, []);
+
+  // Fetch user organizations
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      if (loadingOrganizations) return;
+
+      try {
+        setLoadingOrganizations(true);
+        const organizations = await organizationsApi.getOrganizations();
+        setOrganizations(organizations);
+      } catch (error) {
+        console.error('Error fetching organizations:', error);
+        setJobCreationError('Failed to load organizations. Please try again later.');
+        setShowError(true);
+      } finally {
+        setLoadingOrganizations(false);
+      }
+    };
+    
+    fetchOrganizations();
   }, []);
 
   // Debounced token counter
@@ -335,6 +362,16 @@ const CreateResearchJobPage: React.FC = () => {
     }
   };
 
+  // Handle visibility change
+  const handleVisibilityChange = (value: string, orgId?: number) => {
+    setVisibility(value as Visibility);
+    if (value !== 'org') {
+      setSelectedOrgId(undefined);
+    } else {
+      setSelectedOrgId(orgId);
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -382,7 +419,9 @@ const CreateResearchJobPage: React.FC = () => {
         service: selectedService,
         model: selectedModel,
         prompt: prompt,
-        model_params: Object.keys(paramsObject).length > 0 ? paramsObject : undefined
+        model_params: Object.keys(paramsObject).length > 0 ? paramsObject : undefined,
+        visibility: visibility || undefined,
+        org_id: selectedOrgId
       });
       
       // Handle the response
@@ -440,9 +479,37 @@ const CreateResearchJobPage: React.FC = () => {
 
       <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
         <Paper sx={{ p: 3 }}>
-          <Typography variant="h5" component="h1" gutterBottom>
-            Create New Research Job
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h5" component="h1">
+              Create New Research Job
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {selectedOrgId && visibility === 'org' && organizations.length > 0 && (
+              <Box
+                component="span"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  typography: 'body1',
+                  bgcolor: 'info.dark',
+                  color: 'white',
+                }}
+              >
+                {organizations.find(org => org.id === selectedOrgId)?.name || 'Organization'}
+              </Box>
+            )}
+              <VisibilityFilter
+                value={visibility}
+                onChange={handleVisibilityChange}
+                organizations={organizations}
+                selectedOrgId={selectedOrgId}
+                showAllOption={false}
+                showAllOrganizationsOption={false}
+                loadingOrganizations={loadingOrganizations || showError}
+              />
+            </Box>
+          </Box>
           
           {/* Error message display */}
           <Snackbar 
@@ -456,7 +523,7 @@ const CreateResearchJobPage: React.FC = () => {
             </Alert>
           </Snackbar>
           
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 3 }}>
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
             <Grid2 container spacing={3}>
               {/* Service Selection */}
               <Grid2 size={{ xs: 12, md: 6 }}>

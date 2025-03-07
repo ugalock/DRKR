@@ -6,7 +6,7 @@ import { DeepResearch, CreateDeepResearchRequest, UpdateDeepResearchRequest } fr
 import { Tag, CreateTagRequest } from '../types/tag';
 import { User, UpdateUserRequest } from '../types/user';
 import { ResearchService } from '../types/research_service';
-import { Organization, OrgMembershipRequest, OrganizationCreateRequest } from '../types/organization';
+import { Organization, OrgMembershipRequest, OrganizationCreateRequest, OrgMemberRoleUpdate } from '../types/organization';
 import { ApiKey, ApiKeyCreate } from '../types/api_key';
 import { 
     ResearchJob, 
@@ -16,6 +16,12 @@ import {
     ResearchJobGetRequest, 
     ResearchJobAnswerRequest
 } from '../types/research_job';
+import {
+    OrganizationInvite,
+    OrganizationInviteRequest,
+    AcceptInviteResponse,
+    InviteError
+} from '../types/organization_invite';
 
 import { useAuth } from './useAuth';
 
@@ -86,7 +92,7 @@ export const useApi = () => {
             return response.data;
         },
 
-        updateResearch: async (id: string, data: UpdateDeepResearchRequest) => {
+        updateResearch: async (id: number, data: UpdateDeepResearchRequest) => {
             const response = await api.patch<DeepResearch>(`/api/deep-research/${id}`, data);
             return response.data;
         },
@@ -114,8 +120,23 @@ export const useApi = () => {
     }
 
     const userApi = {
+        getCurrentUser: async () => {
+            const response = await api.get<User>('/api/users/me');
+            return response.data;
+        },
+
         updateUser: async (data: UpdateUserRequest) => {
             const response = await api.patch<User>('/api/users/me', data);
+            return response.data;
+        },
+
+        getUsers: async (params?: { 
+            org_id?: number;
+            search?: string;
+            page?: number; 
+            limit?: number;
+        }) => {
+            const response = await api.get<User[]>('/api/users', { params });
             return response.data;
         },
 
@@ -149,7 +170,7 @@ export const useApi = () => {
             return response.data;
         },
 
-        updateResearchJob: async (id: string, data: ResearchJobUpdateRequest) => {
+        updateResearchJob: async (id: number, data: ResearchJobUpdateRequest) => {
             const response = await api.patch<ResearchJob>(`/api/research-jobs/${id}`, data);
             return response.data;
         },
@@ -163,25 +184,6 @@ export const useApi = () => {
     const researchServicesApi = {
         getResearchServices: async (params?: { service?: string }) => {
             const response = await api.get<ResearchService[]>('/api/research-services', { params });
-            return response.data;
-        },
-    }
-
-    const apiKeysApi = {
-        getApiKeys: async () => {
-            const response = await api.get<ApiKey[]>('/api/api-keys');
-            return response.data;
-        },
-
-        createApiKey: async (data: ApiKeyCreate, orgId?: number) => {
-            const response = await api.post<ApiKey>('/api/api-keys', data, {
-                params: orgId ? { org_id: orgId } : undefined
-            });
-            return response.data;
-        },
-
-        revokeApiKey: async (keyId: number) => {
-            const response = await api.delete<{ message: string }>(`/api/api-keys/${keyId}`);
             return response.data;
         },
     }
@@ -213,6 +215,57 @@ export const useApi = () => {
             });
             return response.data;
         },
+        
+        updateMemberRole: async (orgId: number, userId: number, data: OrgMemberRoleUpdate) => {
+            const response = await api.patch<{ message: string }>(`/api/orgs/${orgId}/members/${userId}`, data);
+            return response.data;
+        }
+    }
+
+    const organizationInvitesApi = {
+        // Create an invitation to an organization
+        createInvite: async (orgId: number, data: OrganizationInviteRequest) => {
+            const response = await api.post<OrganizationInvite | InviteError>(`/api/orgs/${orgId}/invites`, data);
+            return response.data;
+        },
+
+        // List all pending invites for an organization
+        listInvites: async (orgId: number) => {
+            const response = await api.get<OrganizationInvite[]>(`/api/orgs/${orgId}/invites`);
+            return response.data;
+        },
+
+        // Delete an invitation
+        deleteInvite: async (orgId: number, inviteId: number) => {
+            const response = await api.delete<void>(`/api/orgs/${orgId}/invites/${inviteId}`);
+            return response.data;
+        },
+
+        // Accept an invitation
+        acceptInvite: async (token: string) => {
+            const response = await api.post<AcceptInviteResponse>(`/api/invites/${token}/accept`);
+            return response.data;
+        }
+    }
+
+    const apiKeysApi = {
+        getApiKeys: async (orgId?: number) => {
+            const params = orgId ? { org_id: orgId } : undefined;
+            const response = await api.get<ApiKey[]>('/api/api-keys', { params });
+            return response.data;
+        },
+
+        createApiKey: async (data: ApiKeyCreate, orgId?: number) => {
+            const response = await api.post<ApiKey>('/api/api-keys', data, {
+                params: orgId ? { org_id: orgId } : undefined
+            });
+            return response.data;
+        },
+
+        revokeApiKey: async (keyId: number) => {
+            const response = await api.delete<{ message: string }>(`/api/api-keys/${keyId}`);
+            return response.data;
+        },
     }
 
     return {
@@ -224,5 +277,6 @@ export const useApi = () => {
         researchServicesApi,
         apiKeysApi,
         organizationsApi,
+        organizationInvitesApi,
     };
 };

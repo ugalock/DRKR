@@ -261,16 +261,27 @@ async def research_id_patch(
         research.title = deep_research_update_request.title
     if deep_research_update_request.final_report is not None:
         research.final_report = deep_research_update_request.final_report
-    if deep_research_update_request.visibility is not None:
+    if deep_research_update_request.owner_org_id is not None:
+        org_member = next((m for m in current_user.organization_memberships 
+                             if m.organization_id == deep_research_update_request.owner_org_id), None)
+        if not org_member:
+            raise HTTPException(status_code=403, detail="Access denied")
+        research.owner_org_id = deep_research_update_request.owner_org_id
+        research.visibility = "org"
+    elif deep_research_update_request.visibility is not None:
         # Validate visibility change for org items
         if deep_research_update_request.visibility == "org" and not research.owner_org_id:
             raise HTTPException(status_code=400, detail="Cannot set org visibility without an owner organization")
         research.visibility = deep_research_update_request.visibility
+        if deep_research_update_request.visibility != "org":
+            research.owner_org_id = None
     
     # Save changes
     await db.commit()
-    # Refresh the object with relationships loaded
-    await db.refresh(research, options=get_deep_research_options())
+
+    stmt = select(DeepResearchModel).where(DeepResearchModel.id == id).options(*get_deep_research_options())
+    result = await db.execute(stmt)
+    research = result.scalars().first()
     
     return DeepResearch.model_validate(research)
 

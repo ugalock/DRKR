@@ -33,7 +33,7 @@ class ResearchJobGetRequest(CustomBaseModel):
     """
     ResearchJobGetRequest
     """ # noqa: E501
-    id: Optional[StrictStr] = None
+    id: Optional[int] = None
     job_id: Optional[StrictStr] = None
     service: Optional[StrictStr] = None
     __properties: ClassVar[List[str]] = ["id", "job_id", "service"]

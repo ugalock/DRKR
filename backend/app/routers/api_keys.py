@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import secrets
 
 from app.db import get_db
-from app.models import User, ApiKey, ApiService
+from app.models import User, ApiKey as ApiKeyModel, ApiService, OrganizationMember
 from app.schemas.api_key_create import ApiKeyCreate
 from app.schemas.api_key import ApiKey
 from app.services.authentication import get_current_user
@@ -74,12 +74,32 @@ async def create_api_key(
 )
 async def list_api_keys(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    org_id: Optional[int] = Query(None, description="Organization ID to filter API keys")
 ) -> List[ApiKey]:
-    """List all API keys for the current user"""
-    query = select(ApiKey).where(
-        ApiKey.user_id == current_user.id
-    ).options(selectinload(ApiKey.api_service))
+    """List API keys for the current user or specified organization"""
+    if org_id:
+        # Check if the current user is a member of the organization
+        org_member_query = select(OrganizationMember).where(
+            OrganizationMember.organization_id == org_id,
+            OrganizationMember.user_id == current_user.id
+        )
+        result = await db.execute(org_member_query)
+        member = result.scalar_one_or_none()
+        
+        if not member:
+            raise HTTPException(status_code=403, detail="Not a member of this organization")
+        
+        # Get organization API keys
+        query = select(ApiKeyModel).where(
+            ApiKeyModel.organization_id == org_id
+        ).options(selectinload(ApiKeyModel.api_service))
+    else:
+        # Get user API keys
+        query = select(ApiKeyModel).where(
+            ApiKeyModel.user_id == current_user.id
+        ).options(selectinload(ApiKeyModel.api_service))
+    
     result = await db.execute(query)
     api_keys = result.scalars().all()
     
@@ -100,9 +120,9 @@ async def revoke_api_key(
     db: AsyncSession = Depends(get_db)
 ) -> dict:
     """Revoke an API key"""
-    stmt = select(ApiKey).where(
-        ApiKey.id == key_id,
-        ApiKey.user_id == current_user.id
+    stmt = select(ApiKeyModel).where(
+        ApiKeyModel.id == key_id,
+        ApiKeyModel.user_id == current_user.id
     )
     result = await db.execute(stmt)
     api_key = result.scalars().first()

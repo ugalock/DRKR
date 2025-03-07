@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     AUTH0_CLIENT_SECRET: str
     AUTH0_DOMAIN: str
     AUTH0_CALLBACK_URL: str
+    OPENDR_URL: Optional[str] = None
     REDIS_HOST: Optional[str] = "127.0.0.1"
     REDIS_PORT: Optional[int] = 6379
     REDIS_PASSWORD: Optional[str] = ""
@@ -25,7 +26,10 @@ class Settings(BaseSettings):
     API_PORT: Optional[int] = 8000
     API_HOST: Optional[str] = "localhost"
     CLIENT_URL: Optional[str] = "http://localhost:3000"
-    OPENDR_URL: Optional[str] = "http://localhost:8001"
+    MAILTRAP_USERNAME: Optional[str] = "your-mailtrap-username"
+    MAILTRAP_PASSWORD: Optional[str] = "your-mailtrap-password"
+    MAILTRAP_HOST: Optional[str] = "live.smtp.mailtrap.io"
+    MAILTRAP_PORT: Optional[int] = 587
     # JWT Configuration
     JWT_ALGORITHM: str = "RS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 3600

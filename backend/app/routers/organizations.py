@@ -35,6 +35,7 @@ from app.schemas.organization import Organization
 from app.schemas.organization_create_request import OrganizationCreateRequest
 from app.db import get_db
 from app.services.authentication import get_current_user
+from app.schemas.org_member_role_update import OrgMemberRoleUpdate
 
 
 router = APIRouter()
@@ -275,3 +276,94 @@ async def orgs_post(
     org = result.scalars().first()
     
     return Organization.model_validate(org)
+
+
+@router.patch(
+    "/orgs/{id}/members/{user_id}",
+    responses={
+        200: {"description": "Member role updated"},
+    },
+    tags=["organizations"],
+    summary="Update a member's role in the organization",
+    response_model_by_alias=True,
+)
+async def orgs_id_members_user_id_patch(
+    id: StrictInt = Path(..., description="Organization ID"),
+    user_id: StrictInt = Path(..., description="User ID to update"),
+    role_update: OrgMemberRoleUpdate = Body(None, description="New role"),
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+) -> dict:
+    # Permission checks and role validation
+    if role_update.role not in ["member", "admin", "owner"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    # Check if the current user is a member of the organization
+    user_role_query = (
+        select(OrganizationMemberModel)
+        .where(
+            OrganizationMemberModel.organization_id == id,
+            OrganizationMemberModel.user_id == current_user.id
+        )
+    )
+    result = await db.execute(user_role_query)
+    current_user_role = result.scalars().first()
+    if current_user_role is None:
+        raise HTTPException(status_code=403, detail="You are not a member of this organization")
+    is_owner = current_user_role.role == "owner"
+    is_admin = current_user_role.role == "admin"
+    
+    # Get the member to update
+    member_query = (
+        select(OrganizationMemberModel)
+        .where(
+            OrganizationMemberModel.organization_id == id,
+            OrganizationMemberModel.user_id == user_id
+        )
+    )
+    result = await db.execute(member_query)
+    member = result.scalars().first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    current_role = member.role
+    new_role = role_update.role
+    
+    # Owner checks
+    if current_role == "owner" and new_role != "owner" and not is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can demote other owners")
+    
+    # Admin checks
+    if current_role == "admin":
+        if new_role == "owner" and not is_owner:
+            raise HTTPException(status_code=403, detail="Only owners can promote to owner")
+        if new_role == "member" and not (is_owner or is_admin):
+            raise HTTPException(status_code=403, detail="Only admins or owners can demote admins")
+    
+    # Member checks
+    if current_role == "member":
+        if new_role == "owner" and not is_owner:
+            raise HTTPException(status_code=403, detail="Only owners can promote to owner")
+        if new_role == "admin" and not (is_owner or is_admin):
+            raise HTTPException(status_code=403, detail="Only admins or owners can promote to admin")
+    
+    # Cannot change your own role if you're the last owner
+    if current_role == "owner" and member.user_id == current_user.id and new_role != "owner":
+        owner_count_query = (
+            select(OrganizationMemberModel)
+            .where(
+                OrganizationMemberModel.organization_id == id,
+                OrganizationMemberModel.role == "owner"
+            )
+        )
+        result = await db.execute(owner_count_query)
+        owners = result.scalars().all()
+        if len(owners) <= 1:
+            raise HTTPException(status_code=400, detail="Cannot demote the last owner")
+    
+    # Update the role
+    member.role = new_role
+    await db.commit()
+    
+    return {"message": f"Member role updated to {new_role}"}

@@ -31,8 +31,8 @@ class Organization(CustomBaseModel):
     """
     Organization
     """ # noqa: E501
-    id: StrictInt = None
-    name: StrictStr = None
+    id: int
+    name: StrictStr
     description: Optional[StrictStr] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None

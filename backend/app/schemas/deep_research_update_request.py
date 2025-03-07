@@ -17,7 +17,7 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictStr, StrictInt
 from typing import Any, ClassVar, Dict, List, Optional
 try:
     from typing import Self
@@ -33,7 +33,8 @@ class DeepResearchUpdateRequest(CustomBaseModel):
     title: Optional[StrictStr] = None
     final_report: Optional[StrictStr] = None
     visibility: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["title", "final_report", "visibility"]
+    owner_org_id: Optional[StrictInt] = None
+    __properties: ClassVar[List[str]] = ["title", "final_report", "visibility", "owner_org_id"]
 
     model_config = {
         "populate_by_name": True,

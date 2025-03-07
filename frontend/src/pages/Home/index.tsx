@@ -7,6 +7,7 @@ import type { Tag } from '../../types/tag';
 import Header from '../../components/common/Header';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
+import { formatTimestamp } from '../../utils/formatters';
 
 export const HomePage: React.FC = () => {
   const api = useApi();
@@ -60,7 +61,7 @@ export const HomePage: React.FC = () => {
                     </p>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">
-                        {new Date(item.created_at).toLocaleDateString()}
+                        {formatTimestamp(item.created_at)}
                       </span>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         item.visibility === 'public'

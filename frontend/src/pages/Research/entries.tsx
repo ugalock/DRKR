@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -15,6 +15,8 @@ import {
   TablePagination,
   TableSortLabel,
   TextField,
+  Tooltip,
+  Button,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -25,6 +27,7 @@ import NavBar from '../../components/common/NavBar';
 import { DeepResearch } from '../../types/deep_research';
 import { Organization } from '../../types/organization';
 import { useApi } from '../../hooks/useApi';
+import { formatTimestamp } from '../../utils/formatters';
 
 type Order = 'asc' | 'desc';
 
@@ -46,9 +49,10 @@ const columns: Column[] = [
 
 interface RowProps {
   entry: DeepResearch;
+  orgName?: string;
 }
 
-const EntryRow: React.FC<RowProps> = ({ entry }) => {
+const EntryRow: React.FC<RowProps> = ({ entry, orgName }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -67,39 +71,55 @@ const EntryRow: React.FC<RowProps> = ({ entry }) => {
         </TableCell>
         <TableCell>{entry.model_name}</TableCell>
         <TableCell>
-          <Box
-            component="span"
-            sx={{
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              typography: 'body2',
-              bgcolor: entry.visibility === 'public' 
-                ? 'success.light' 
-                : entry.visibility === 'org' 
-                ? 'info.light' 
-                : 'grey.200',
-              color: entry.visibility === 'public' 
-                ? 'success.dark' 
-                : entry.visibility === 'org' 
-                ? 'info.dark' 
-                : 'grey.700',
-            }}
-          >
-            {entry.visibility}
-          </Box>
+          <Tooltip title={orgName || entry.visibility}>
+            <Box
+              component="span"
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                typography: 'body2',
+                maxWidth: '150px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: 'inline-block',
+                bgcolor: entry.visibility === 'public' 
+                  ? 'success.light' 
+                  : entry.visibility === 'org' 
+                  ? 'info.light' 
+                  : 'grey.200',
+                color: entry.visibility === 'public' 
+                  ? 'success.dark' 
+                  : entry.visibility === 'org' 
+                  ? 'info.dark' 
+                  : 'grey.700',
+              }}
+            >
+              {orgName || entry.visibility}
+            </Box>
+          </Tooltip>
         </TableCell>
-        <TableCell>{new Date(entry.created_at!).toLocaleString()}</TableCell>
-        <TableCell>{new Date(entry.updated_at!).toLocaleString()}</TableCell>
+        <TableCell>{formatTimestamp(entry.created_at!)}</TableCell>
+        <TableCell>{formatTimestamp(entry.updated_at!)}</TableCell>
       </TableRow>
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
-              <Typography variant="h6" gutterBottom component="div">
-                Entry Details
-              </Typography>
-              <Typography variant="subtitle1" gutterBottom>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  component={Link} 
+                  to={`/research/${entry.id}`}
+                  size="small"
+                >
+                  View Entry
+                </Button>
+              </Box>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Prompt:
               </Typography>
               <Typography sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
@@ -107,11 +127,11 @@ const EntryRow: React.FC<RowProps> = ({ entry }) => {
               </Typography>
               {entry.model_params && (
                 <>
-                  <Typography variant="subtitle1" gutterBottom>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                     Model Parameters:
                   </Typography>
-                  <Typography component="pre" sx={{ mb: 2 }}>
-                    {JSON.stringify(entry.model_params, null, 2)}
+                  <Typography sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                    {JSON.stringify(entry.model_params, null)}
                   </Typography>
                 </>
               )}
@@ -179,6 +199,7 @@ const ResearchEntriesPage: React.FC = () => {
   // Initialize state
   const [entries, setEntries] = useState<DeepResearch[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [orgNameMap, setOrgNameMap] = useState<Record<number, string>>({});
   const [initialLoading, setInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [page, setPage] = useState(0);
@@ -244,6 +265,15 @@ const ResearchEntriesPage: React.FC = () => {
         const orgs = await organizationsApi.getOrganizations();
         setOrganizations(orgs);
         
+        // Create organization name lookup map
+        const lookup = orgs.reduce((acc, org) => {
+          if (org.id !== undefined) {
+            acc[org.id] = org.name;
+          }
+          return acc;
+        }, {} as Record<number, string>);
+        setOrgNameMap(lookup);
+        
         // Validate selectedOrgId if one is provided from query params
         if (selectedOrgId !== undefined) {
           const orgExists = orgs.some(org => org.id === selectedOrgId);
@@ -271,7 +301,7 @@ const ResearchEntriesPage: React.FC = () => {
       }
     };
     loadOrgs();
-  }, []);
+  }, [selectedOrgId, filters.visibility]);
 
   // Update handleSort to use the more specific type
   const handleSort = (property: SortableColumn) => {
@@ -391,7 +421,9 @@ const ResearchEntriesPage: React.FC = () => {
               {entries.map((entry) => (
                 <EntryRow 
                   key={entry.id} 
-                  entry={entry}
+                  entry={entry} 
+                  orgName={entry.visibility === 'org' && entry.owner_org_id ? 
+                    orgNameMap[Number(entry.owner_org_id)] : undefined}
                 />
               ))}
             </TableBody>

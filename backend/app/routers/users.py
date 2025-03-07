@@ -38,6 +38,66 @@ ns_pkg = app.impl
 for _, name, _ in pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + "."):
     importlib.import_module(name)
 
+@router.get(
+    "/users/me",
+    responses={
+        200: {"model": User, "description": "Current user data"},
+    },
+    tags=["users"],
+    summary="Get current user data",
+    response_model_by_alias=True,
+)
+async def users_me_get(
+    current_user: UserModel = Depends(get_current_user)
+) -> User:
+    return User.model_validate(current_user)
+
+@router.patch(
+    "/users/me",
+    responses={
+        200: {"model": User, "description": "Current user updated"},
+    },
+    tags=["users"],
+    summary="Update current user",
+    response_model_by_alias=True,
+)
+async def users_me_patch(
+    user_update_request: UserUpdateRequest = Body(None, description=""),
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+) -> User:
+    # Update fields
+    if user_update_request.email is not None:
+        # Check email uniqueness
+        existing = await db.execute(select(UserModel).filter(UserModel.email == user_update_request.email))
+        if existing.scalars().first():
+            raise HTTPException(status_code=400, detail="Email already in use")
+        current_user.email = user_update_request.email
+        
+    if user_update_request.display_name is not None:
+        current_user.display_name = user_update_request.display_name
+    
+    current_user.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(current_user)
+    return User.model_validate(current_user)
+
+@router.get(
+    "/users/me/{id_token}",
+    responses={
+        200: {"model": User, "description": "Current user data"},
+    },
+    tags=["users"],
+    summary="Create current user",
+    response_model_by_alias=True,
+)
+async def users_me_create(
+    id_token: str = Path(..., description="Auth0 ID token"),
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(create_user_if_not_exists)
+) -> User:
+    user = await create_user_if_not_exists(id_token, db)
+    return User.model_validate(user)
 
 @router.delete(
     "/users/{id}",
@@ -67,7 +127,7 @@ async def users_id_delete(
 )
 async def users_get(
     org_id: Optional[int] = Query(None, description="Filter by organization ID"),
-    search: Optional[str] = Query(None, description="Search by username or display name"),
+    search: Optional[str] = Query(None, description="Search by username, display name, or email"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(50, ge=1, le=100, description="Items per page"),
     db: AsyncSession = Depends(get_db),
@@ -207,65 +267,4 @@ async def users_id_patch(
     user.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(user)
-    return User.model_validate(user)
-
-@router.get(
-    "/users/me",
-    responses={
-        200: {"model": User, "description": "Current user data"},
-    },
-    tags=["users"],
-    summary="Get current user data",
-    response_model_by_alias=True,
-)
-async def users_me_get(
-    current_user: UserModel = Depends(get_current_user)
-) -> User:
-    return User.model_validate(current_user)
-
-@router.patch(
-    "/users/me",
-    responses={
-        200: {"model": User, "description": "Current user updated"},
-    },
-    tags=["users"],
-    summary="Update current user",
-    response_model_by_alias=True,
-)
-async def users_me_patch(
-    user_update_request: UserUpdateRequest = Body(None, description=""),
-    db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-) -> User:
-    # Update fields
-    if user_update_request.email is not None:
-        # Check email uniqueness
-        existing = await db.execute(select(UserModel).filter(UserModel.email == user_update_request.email))
-        if existing.scalars().first():
-            raise HTTPException(status_code=400, detail="Email already in use")
-        current_user.email = user_update_request.email
-        
-    if user_update_request.display_name is not None:
-        current_user.display_name = user_update_request.display_name
-    
-    current_user.updated_at = datetime.utcnow()
-    await db.commit()
-    await db.refresh(current_user)
-    return User.model_validate(current_user)
-
-@router.get(
-    "/users/me/{id_token}",
-    responses={
-        200: {"model": User, "description": "Current user data"},
-    },
-    tags=["users"],
-    summary="Create current user",
-    response_model_by_alias=True,
-)
-async def users_me_create(
-    id_token: str = Path(..., description="Auth0 ID token"),
-    db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(create_user_if_not_exists)
-) -> User:
-    user = await create_user_if_not_exists(id_token, db)
     return User.model_validate(user)

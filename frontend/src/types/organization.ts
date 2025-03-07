@@ -24,4 +24,8 @@ export interface OrgMembershipRequest {
 export interface OrganizationCreateRequest {
   name: string;
   description?: string;
+}
+
+export interface OrgMemberRoleUpdate {
+  role: string;
 } 

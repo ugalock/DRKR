@@ -13,6 +13,7 @@ from app.routers.search import router as SearchRouter
 from app.routers.tags import router as TagsRouter
 from app.routers.users import router as UsersRouter
 from app.routers.api_keys import router as ApiKeysRouter
+from app.routers.organization_invites import router as OrganizationInvitesRouter, invites_router as AcceptInvitesRouter
 
 app = FastAPI(
     title="DRKR API",
@@ -32,6 +33,8 @@ app.add_middleware(
 app.include_router(AuthRouter, prefix="/api")
 app.include_router(CommentsRouter, prefix="/api")
 app.include_router(DeepResearchRouter, prefix="/api")
+app.include_router(OrganizationInvitesRouter, prefix="/api")
+app.include_router(AcceptInvitesRouter, prefix="/api")
 app.include_router(OrganizationsRouter, prefix="/api")
 app.include_router(RatingsRouter, prefix="/api")
 app.include_router(ResearchJobsRouter, prefix="/api")

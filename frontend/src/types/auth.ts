@@ -1,5 +1,5 @@
 import { Auth0ContextInterface } from '@auth0/auth0-react'
-import { UserProfile } from './user'
+import { User } from './user'
 
 export interface TokenResponse {
   access_token: string
@@ -9,5 +9,5 @@ export interface TokenResponse {
 }
 
 export interface AuthState extends Auth0ContextInterface {
-  getUserProfile: (token: string) => Promise<UserProfile>
+  getUserProfile: (token: string) => Promise<User>
 } 

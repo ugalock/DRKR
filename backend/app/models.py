@@ -13,11 +13,11 @@ from sqlalchemy import (
     Index,
     Enum,
     func,
+    text
 )
 from pgvector.sqlalchemy import Vector as VECTOR
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql import func as sql_func
 from app.db.database import Base
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 
@@ -28,12 +28,13 @@ class Organization(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text)
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
     api_keys = relationship("ApiKey", back_populates="organization")
     research_jobs = relationship("ResearchJob", back_populates="organization", foreign_keys="ResearchJob.owner_org_id")
+    invites = relationship("OrganizationInvite", back_populates="organization", cascade="all, delete-orphan")
 
 # 2) users
 class User(Base):
@@ -47,8 +48,8 @@ class User(Base):
     default_role = Column(String(50), default="user")
     auth_provider = Column(String(50), default="google-oauth2")
     picture_url = Column(String(255))
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     __table_args__ = (
         CheckConstraint("""
@@ -71,8 +72,8 @@ class OrganizationMember(Base):
     organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role = Column(String(50), nullable=False, default="member")
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     __table_args__ = (
         UniqueConstraint("organization_id", "user_id", name="uq_org_user"),
@@ -87,8 +88,8 @@ class ApiService(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
     
     # Relationship
     api_keys = relationship("ApiKey", back_populates="api_service")
@@ -104,7 +105,7 @@ class ApiKey(Base):
     organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"))
     token = Column(String(255), unique=True, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
     expires_at = Column(DateTime(timezone=False))
 
     # Enforce exactly one of user_id or organization_id is non-NULL:
@@ -140,8 +141,8 @@ class DeepResearch(Base):
     model_name = Column(String(100))
     model_params = Column(JSONB)
     source_count = Column(Integer, default=0)
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     # Postgres full-text columns
     prompt_tsv = Column(TSVECTOR)
@@ -169,8 +170,8 @@ class ResearchChunk(Base):
     chunk_index = Column(Integer, nullable=False)
     chunk_type = Column(String(50))
     chunk_text = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     deep_research = relationship("DeepResearch", back_populates="chunks")
 
@@ -183,7 +184,7 @@ class ResearchSummary(Base):
     summary_scope = Column(String(50), nullable=False)
     summary_length = Column(String(50), nullable=False)
     summary_text = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
 
     deep_research = relationship("DeepResearch", back_populates="summaries")
 
@@ -198,7 +199,7 @@ class ResearchSource(Base):
     source_excerpt = Column(Text)
     domain = Column(String(255))  # e.g. "nytimes.com"
     source_type = Column(String(50))  # e.g. "website", "paper", "book"
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
 
     deep_research = relationship("DeepResearch", back_populates="sources")
 
@@ -210,7 +211,7 @@ class DomainCoOccurrence(Base):
     domain_a = Column(String(255), nullable=False)
     domain_b = Column(String(255), nullable=False)
     co_occurrence_count = Column(Integer, nullable=False, default=0)
-    last_updated = Column(DateTime(timezone=False), server_default=sql_func.now())
+    last_updated = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     __table_args__ = (
         UniqueConstraint("domain_a", "domain_b", name="uq_domain_a_b"),
@@ -226,7 +227,7 @@ class Tag(Base):
     is_global = Column(Boolean, nullable=False, default=False)
     organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"))
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
 
     # The check constraint:
     __table_args__ = (
@@ -279,7 +280,7 @@ class ResearchRating(Base):
     deep_research_id = Column(Integer, ForeignKey("deep_research.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     rating_value = Column(Integer, nullable=False)  # e.g. 1-5 or -1/1
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
 
     __table_args__ = (
         UniqueConstraint("deep_research_id", "user_id", name="uq_research_user_rating"),
@@ -297,8 +298,8 @@ class ResearchComment(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     parent_comment_id = Column(Integer)  # For nested threads (self-referential if needed)
     comment_text = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     deep_research = relationship("DeepResearch", back_populates="comments")
     user = relationship("User", back_populates="comments")
@@ -312,7 +313,7 @@ class ResearchAutoMetadata(Base):
     meta_key = Column(String(100), nullable=False)
     meta_value = Column(Text, nullable=False)
     confidence_score = Column(Integer)  # or Float
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
 
     deep_research = relationship("DeepResearch", back_populates="auto_metadata")
 
@@ -332,8 +333,8 @@ class ResearchJob(Base):
     model_name = Column(String(100), nullable=False)
     model_params = Column(JSONB)
     deep_research_id = Column(Integer, ForeignKey("deep_research.id", ondelete="SET NULL"))
-    created_at = Column(DateTime(timezone=False), server_default=sql_func.now())
-    updated_at = Column(DateTime(timezone=False), server_default=sql_func.now(), onupdate=sql_func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
 
     __table_args__ = (
         CheckConstraint("""
@@ -361,8 +362,8 @@ class ResearchService(Base):
     description = Column(Text)
     url = Column(String(255))
     default_model_id = Column(Integer, ForeignKey("ai_models.id"), nullable=True)
-    created_at = Column(String, server_default=func.now())
-    updated_at = Column(String, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
     
     # Relationships
     default_model = relationship("AiModel", foreign_keys=[default_model_id])
@@ -382,8 +383,8 @@ class AiModel(Base):
     default_params = Column(JSONB, nullable=False)
     max_tokens = Column(Integer, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(String, server_default=func.now())
-    updated_at = Column(String, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
     
     # Relationships
     services = relationship("ResearchService", secondary="research_service_models", 
@@ -405,8 +406,8 @@ class ResearchServiceModel(Base):
     service_id = Column(Integer, ForeignKey("research_services.id", ondelete="CASCADE"), nullable=False)
     model_id = Column(Integer, ForeignKey("ai_models.id", ondelete="CASCADE"), nullable=False)
     is_default = Column(Boolean, default=False)
-    created_at = Column(String, server_default=func.now())
-    updated_at = Column(String, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
     
     # Relationships
     service = relationship("ResearchService", back_populates="service_models",
@@ -417,5 +418,29 @@ class ResearchServiceModel(Base):
     # Make sure each model is linked to a service only once
     __table_args__ = (
         UniqueConstraint("service_id", "model_id", name="uq_service_model"),
+    )
+
+# 20) organization_invites
+class OrganizationInvite(Base):
+    __tablename__ = "organization_invites"
+
+    id = Column(Integer, primary_key=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    invited_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(255), unique=True, nullable=False)
+    role = Column(String(50), nullable=False, default="member")
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    is_used = Column(Boolean, default=False)
+    expires_at = Column(DateTime(timezone=False), nullable=False)
+    created_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=False), nullable=False, server_default=text("(now() AT TIME ZONE 'utc')"), onupdate=text("(now() AT TIME ZONE 'utc')"))
+    
+    # Relationships
+    organization = relationship("Organization", back_populates="invites")
+    creator = relationship("User", foreign_keys=[created_by], uselist=False)
+    invited_user = relationship("User", foreign_keys=[invited_user_id], uselist=False)
+    
+    __table_args__ = (
+        UniqueConstraint("organization_id", "invited_user_id", name="uq_org_invite_user"),
     )
     

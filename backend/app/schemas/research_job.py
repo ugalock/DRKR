@@ -33,8 +33,8 @@ class ResearchJob(CustomBaseModel):
     id: Optional[StrictInt] = None
     job_id: StrictStr
     user_id: int
-    owner_user_id: Optional[str] = None
-    owner_org_id: Optional[str] = None
+    owner_user_id: Optional[int] = None
+    owner_org_id: Optional[int] = None
     visibility: StrictStr
     status: StrictStr
     service: StrictStr

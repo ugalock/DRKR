@@ -42,4 +42,6 @@ export interface UpdateDeepResearchRequest {
     title?: string;
     prompt_text?: string;
     final_report?: string;
+    owner_org_id?: number;
+    visibility?: Visibility;
 }

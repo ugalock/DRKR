@@ -59,7 +59,7 @@ def check_research_job_permissions(job: ResearchJobModel, current_user: User) ->
         return True
     elif job.visibility == "org":
         return (job.owner_org_id is not None and 
-                job.owner_org_id == current_user.org_id)
+                job.owner_org_id in [m.organization_id for m in current_user.organization_memberships])
     
     return False
 
@@ -154,13 +154,21 @@ async def research_jobs_get(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ResearchJobSchema:
+    id = request.id if hasattr(request, 'id') else None
+    job_id = request.job_id if hasattr(request, 'job_id') else None
+    service = request.service if hasattr(request, 'service') else None
+    if not id and (not job_id or not service):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either id or job_id and service must be provided"
+        )
     """Get research job status."""
     result = await research_service.poll_status(
         db=db,
         user_id=current_user.id,
-        id=request.id if hasattr(request, 'id') else None,
-        job_id=request.job_id if hasattr(request, 'job_id') else None,
-        service=request.service if hasattr(request, 'service') else None
+        id=id,
+        job_id=job_id,
+        service=service
     )
     
     if not check_research_job_permissions(result["job"], current_user):
@@ -192,7 +200,8 @@ async def research_jobs_id_patch(
     """Update research job."""
     # Get existing job
     stmt = select(ResearchJobModel).where(ResearchJobModel.id == id)
-    db_job = await db.execute(stmt).scalar_one_or_none()
+    db_job = await db.execute(stmt)
+    db_job = db_job.scalar_one_or_none()
     
     if not db_job:
         raise HTTPException(
@@ -213,7 +222,7 @@ async def research_jobs_id_patch(
             return await research_service.cancel_job(
                 db=db,
                 service=db_job.service,
-                user_id=str(current_user.id),
+                user_id=current_user.id,
                 job_id=db_job.job_id
             )
         return ResearchJobSchema.model_validate(db_job)
@@ -251,7 +260,9 @@ async def research_jobs_post(
         user_id=str(current_user.id),
         prompt=request.prompt,
         model=request.model,
-        model_params=request.model_params
+        model_params=request.model_params,
+        visibility=request.visibility,
+        org_id=request.org_id
     )
     return result
 
